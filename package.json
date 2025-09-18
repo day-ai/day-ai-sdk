@@ -9,7 +9,6 @@
     "dev": "tsc --watch",
     "oauth:setup": "node dist/scripts/oauth-setup.js",
     "oauth:refresh": "node dist/scripts/oauth-refresh.js",
-    "example:basic": "node dist/examples/basic-example.js",
     "example:mcp": "node dist/examples/mcp-tool-example.js",
     "example:meetings": "node dist/examples/recent-meetings-context.js"
   },
