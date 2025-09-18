@@ -178,12 +178,14 @@ interface DayAIConfig {
 
 ## Available Scripts
 
-| Script               | Description                    |
-| -------------------- | ------------------------------ |
-| `yarn build`         | Build TypeScript to JavaScript |
-| `yarn dev`           | Watch mode for development     |
-| `yarn oauth:setup`   | Run OAuth setup wizard         |
-| `yarn example:basic` | Run basic example              |
+| Script                | Description                         |
+| --------------------- | ----------------------------------- |
+| `yarn build`          | Build TypeScript to JavaScript      |
+| `yarn dev`            | Watch mode for development          |
+| `yarn oauth:setup`    | Run OAuth setup wizard              |
+| `yarn example:basic`  | Run basic API example               |
+| `yarn example:mcp`    | Run MCP tool call example           |
+| `yarn example:meetings` | Run meeting recordings context example |
 
 ## Examples
 
@@ -220,15 +222,54 @@ if (apiResponse.success) {
 } else {
   console.error("API Error:", apiResponse.error);
 }
-
-// Example: GraphQL query (use your actual schema)
-const graphqlResponse = await client.graphql(`
-  query {
-    # Consult Day AI's GraphQL schema documentation
-    # This SDK handles authentication but doesn't define the schema
-  }
-`);
 ```
+
+### MCP (Model Context Protocol) Integration
+
+The SDK includes built-in support for Day AI's MCP server:
+
+```typescript
+// Initialize MCP connection
+await client.mcpInitialize();
+
+// List available tools
+const tools = await client.mcpListTools();
+console.log("Available tools:", tools.data?.tools);
+
+// Call a specific tool
+const context = await client.mcpCallTool('get_context_for_objects', {
+  objects: [{ 
+    objectId: 'email@company.com', 
+    objectType: 'native_contact' 
+  }]
+});
+
+// Search for objects with time-based filters
+const meetings = await client.mcpCallTool('search_objects', {
+  queries: [{
+    objectType: 'native_meetingrecording',
+    where: {
+      propertyId: 'createdAt',
+      operator: 'gte',
+      value: Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000).toString()
+    }
+  }],
+  limit: 10
+});
+
+// Get meeting recording context
+const meetingContext = await client.mcpCallTool('get_meeting_recording_context', {
+  recordingId: 'recording-id'
+});
+```
+
+### Example Scripts
+
+Run these examples to see the SDK in action:
+
+- **Basic Connection**: `yarn example:basic` - Test OAuth and connection
+- **MCP Tools**: `yarn example:mcp` - List tools and get contact context  
+- **Recent Meetings**: `yarn example:meetings` - Search recent recordings and get context
 
 ## Token Management
 
