@@ -245,15 +245,13 @@ const context = await client.mcpCallTool('get_context_for_objects', {
 });
 
 // Search for objects with time-based filters
+const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 const meetings = await client.mcpCallTool('search_objects', {
   queries: [{
-    objectType: 'native_meetingrecording',
-    where: {
-      propertyId: 'createdAt',
-      operator: 'gte',
-      value: Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000).toString()
-    }
+    objectType: 'native_meetingrecording'
   }],
+  timeframeStart: sevenDaysAgo.toISOString(),
+  timeframeEnd: new Date().toISOString(),
   limit: 10
 });
 

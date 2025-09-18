@@ -43,17 +43,18 @@ async function main() {
     console.log(`   Timestamp filter: ${timestampFilter}\n`);
 
     // Search for recent meeting recordings
-    const searchResult = await client.mcpCallTool('search_objects', {
+    const searchPayload = {
       queries: [{
-        objectType: 'native_meetingrecording',
-        where: {
-          propertyId: 'createdAt',
-          operator: 'gte',
-          value: timestampFilter.toString()
-        }
+        objectType: 'native_meetingrecording'
       }],
-      limit: 10 // Get up to 10 recent recordings
-    });
+      timeframeStart: sevenDaysAgo.toISOString(),
+      timeframeEnd: now.toISOString(),
+      limit: 10
+    };
+
+    console.log('3. Searching with time filter...');
+    
+    const searchResult = await client.mcpCallTool('search_objects', searchPayload);
     
     if (!searchResult.success) {
       console.error('❌ Search failed:', searchResult.error);
@@ -69,7 +70,7 @@ async function main() {
     console.log('✅ Search completed!');
     
     // Parse the search results
-    let searchResults;
+    let meetingRecordings;
     try {
       const searchContent = searchResult.data?.content[0]?.text;
       if (!searchContent) {
@@ -77,19 +78,23 @@ async function main() {
         process.exit(1);
       }
       
-      searchResults = JSON.parse(searchContent);
-      console.log(`   Found ${searchResults.objects?.length || 0} meeting recordings\n`);
+      const parsedResponse = JSON.parse(searchContent);
+      meetingRecordings = parsedResponse.native_meetingrecording?.results || [];
       
-      if (!searchResults.objects || searchResults.objects.length === 0) {
+      console.log(`✅ Found ${meetingRecordings.length} meeting recordings\n`);
+      
+      if (meetingRecordings.length === 0) {
         console.log('ℹ️  No meeting recordings found in the last 7 days');
         process.exit(0);
       }
 
       // Show the first few results
       console.log('📋 Recent meeting recordings:');
-      searchResults.objects.slice(0, 3).forEach((recording: any, index: number) => {
-        console.log(`   ${index + 1}. ${recording.objectId} - ${recording.title || 'Untitled'}`);
-        console.log(`      Date: ${recording.createdAt ? new Date(recording.createdAt * 1000).toISOString() : 'Unknown'}`);
+      meetingRecordings.slice(0, 3).forEach((recording: any, index: number) => {
+        console.log(`   ${index + 1}. ${recording.objectId}`);
+        console.log(`      Title: ${recording.title || 'Untitled'}`);
+        console.log(`      Updated: ${recording.updatedAt || 'Unknown'}`);
+        console.log(`      Description: ${recording.description || 'No description'}`);
       });
       console.log();
 
@@ -100,7 +105,7 @@ async function main() {
     }
 
     // Get the first recording's objectId
-    const firstRecording = searchResults.objects[0];
+    const firstRecording = meetingRecordings[0];
     const recordingId = firstRecording.objectId;
 
     console.log(`4. Getting context for meeting recording: ${recordingId}...`);
@@ -108,7 +113,7 @@ async function main() {
 
     // Get meeting recording context
     const contextResult = await client.mcpCallTool('get_meeting_recording_context', {
-      recordingId: recordingId
+      meetingRecordingId: recordingId
     });
     
     if (!contextResult.success) {
