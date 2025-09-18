@@ -1,0 +1,33 @@
+{
+  "name": "day-ai-sdk",
+  "version": "0.1.0",
+  "description": "SDK for integrating with Day AI",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "oauth:setup": "node dist/scripts/oauth-setup.js",
+    "oauth:refresh": "node dist/scripts/oauth-refresh.js",
+    "example:basic": "node dist/examples/basic-example.js",
+    "example:mcp": "node dist/examples/mcp-tool-example.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^8.2.3",
+    "@types/node": "^24.5.2",
+    "typescript": "^5.2.2"
+  },
+  "keywords": [
+    "day-ai",
+    "crm",
+    "api",
+    "sdk"
+  ],
+  "author": "Day AI",
+  "license": "MIT",
+  "packageManager": "yarn@4.4.0+sha512.91d93b445d9284e7ed52931369bc89a663414e5582d00eea45c67ddc459a2582919eece27c412d6ffd1bd0793ff35399381cb229326b961798ce4f4cc60ddfdb"
+}
