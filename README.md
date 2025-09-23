@@ -352,6 +352,978 @@ yarn build
 **Problem**: "Connection failed"
 **Solution**: Verify your Day AI instance URL and network connectivity
 
+# Object Schemas
+
+For full object schema information, visit [SCHEMA.md](SCHEMA.md)
+
+# Assistant Tool Input Schemas
+
+This document describes the input schema for each tool available in the Day AI Assistant V1 API. Each tool has a specific purpose and requires certain input parameters to function correctly.
+
+## Table of Contents
+
+### Search & Query Tools
+
+- [search_objects](#search_objects)
+- [keyword_search](#keyword_search)
+- [get_context_for_objects](#get_context_for_objects)
+
+### CRM Object Management
+
+- [create_or_update_person_organization](#create_or_update_person_organization)
+- [create_or_update_opportunity](#create_or_update_opportunity)
+- [create_or_update_pipeline_stage](#create_or_update_pipeline_stage)
+- [update_object](#update_object)
+- [analyze_before_create_or_update](#analyze_before_create_or_update)
+
+### Content Creation & Management
+
+- [create_page](#create_page)
+- [update_page](#update_page)
+- [create_email_draft](#create_email_draft)
+- [send_email](#send_email)
+- [create_or_update_workspace_context](#create_or_update_workspace_context)
+
+### Actions & Tasks
+
+- [create_or_update_action](#create_or_update_action)
+
+### Views & Visualization
+
+- [create_view](#create_view)
+- [create_chart](#create_chart)
+
+### Meeting & Recording Tools
+
+- [get_meeting_recording_context](#get_meeting_recording_context)
+- [create_meeting_recording_clip](#create_meeting_recording_clip)
+
+### Notifications & Communication
+
+- [send_notification](#send_notification)
+
+### Utility Tools
+
+- [web_search](#web_search)
+- [get_share_url](#get_share_url)
+- [create_custom_property](#create_custom_property)
+
+---
+
+## search_objects
+
+Search for CRM objects using complex queries with filters and conditions.
+
+### Input Schema
+
+```typescript
+{
+  queries: Array<{
+    objectType: string; // One of: Person, Organization, Opportunity, Action, MeetingRecording, Page, Thread, Draft, Pipeline, Stage
+    where?: {
+      AND?: Array<WhereCondition>;
+      OR?: Array<WhereCondition>;
+      NOT?: WhereCondition;
+      // Direct property conditions
+      [propertyName: string]: {
+        equals?: any;
+        not?: any;
+        in?: any[];
+        notIn?: any[];
+        lt?: any;
+        lte?: any;
+        gt?: any;
+        gte?: any;
+        contains?: string;
+        startsWith?: string;
+        endsWith?: string;
+        // Date-specific operators
+        dateEquals?: string;
+        dateLt?: string;
+        dateLte?: string;
+        dateGt?: string;
+        dateGte?: string;
+      };
+    };
+    orderBy?: Array<{
+      [propertyName: string]: "asc" | "desc";
+    }>;
+    take?: number; // Limit results (default: 10, max: 100)
+    skip?: number; // Offset for pagination
+  }>;
+}
+```
+
+### Example
+
+```json
+{
+  "queries": [
+    {
+      "objectType": "Person",
+      "where": {
+        "AND": [
+          { "email": { "contains": "@acme.com" } },
+          { "jobTitle": { "contains": "Engineer" } }
+        ]
+      },
+      "orderBy": [{ "lastName": "asc" }],
+      "take": 20
+    }
+  ]
+}
+```
+
+---
+
+## keyword_search
+
+Perform keyword-based searches across CRM objects.
+
+### Input Schema
+
+```typescript
+{
+  searchOperations: Array<{
+    objectType:
+      | "native_contact"
+      | "native_organization"
+      | "native_opportunity"
+      | "native_pipeline"
+      | "native_meetingrecording"
+      | "native_page";
+    keywords: string[]; // Keywords that should ALL be found. Use ["EMPTY"] to search all
+    limit?: number; // 1-50, default: 10
+    searchIntent?: "find_specific" | "explore_many"; // default: 'find_specific'
+  }>;
+}
+```
+
+### Example
+
+```json
+{
+  "searchOperations": [
+    {
+      "objectType": "native_contact",
+      "keywords": ["Jamie", "Alfalfa"],
+      "limit": 3,
+      "searchIntent": "find_specific"
+    }
+  ]
+}
+```
+
+---
+
+## get_context_for_objects
+
+Retrieve detailed context for multiple CRM objects.
+
+### Input Schema
+
+```typescript
+{
+  objectIds: string[] // Array of object IDs to get context for
+  tokenOffset?: number // For pagination, default: 0
+}
+```
+
+### Example
+
+```json
+{
+  "objectIds": ["person_123", "org_456", "opp_789"],
+  "tokenOffset": 0
+}
+```
+
+---
+
+## create_or_update_person_organization
+
+Create or update Person and Organization objects in the CRM.
+
+### Input Schema
+
+```typescript
+{
+  isCreating?: boolean // Explicitly control create vs update
+  objectId?: string // Required for updates, empty for creates
+  objectType: 'Person' | 'Organization'
+  standardProperties?: {
+    // Person properties
+    email?: string
+    firstName?: string
+    lastName?: string
+    phoneNumbers?: string[]
+    jobTitle?: string
+    linkedInUrl?: string
+    xUrl?: string
+
+    // Organization properties
+    domain?: string
+    name?: string
+    url?: string
+    industry?: string
+    employeeCount?: number
+    revenue?: number
+
+    // Common properties
+    [key: string]: any
+  }
+  customProperties?: Array<{
+    propertyId: string // Custom property ID or "custom/{propId}/{optionId}" for picklists
+    value: any // Value appropriate for the property type
+  }>
+}
+```
+
+### Example
+
+```json
+{
+  "objectType": "Person",
+  "standardProperties": {
+    "email": "john.doe@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "jobTitle": "Software Engineer"
+  },
+  "customProperties": [
+    {
+      "propertyId": "custom_prop_123",
+      "value": "Custom value"
+    }
+  ]
+}
+```
+
+---
+
+## create_or_update_opportunity
+
+Create or update Opportunity objects.
+
+### Input Schema
+
+```typescript
+{
+  isCreating?: boolean // Explicitly control create vs update
+  objectId?: string // Required for updates
+  standardProperties?: {
+    title: string // Required for creation
+    stageId: string // Required for creation (UUID or full reference)
+    domain: string // Required for creation (business domain, not freemail)
+    ownerEmail?: string // Must be workspace member
+    expectedRevenue?: number
+    expectedCloseDate?: string // ISO date
+    primaryPerson?: string
+    type?: string
+    roles?: Array<{
+      personEmail: string
+      roles: string[]
+      reasoning?: string
+    }>
+    [key: string]: any
+  }
+  customProperties?: Array<{
+    propertyId: string
+    value: any
+  }>
+}
+```
+
+### Example
+
+```json
+{
+  "standardProperties": {
+    "title": "Acme Corp Enterprise Deal",
+    "stageId": "abc123-def456",
+    "domain": "acme.com",
+    "ownerEmail": "sales@company.com",
+    "expectedRevenue": 50000,
+    "expectedCloseDate": "2024-06-30"
+  }
+}
+```
+
+---
+
+## create_or_update_pipeline_stage
+
+Create or update Pipeline and Stage objects.
+
+### Input Schema
+
+```typescript
+{
+  objectType: 'Pipeline' | 'Stage'
+  objectId?: string // For updates
+  propertyUpdates: Array<{
+    propertyId: string
+    value: any
+    reasoning?: string
+    source?: string
+  }>
+}
+```
+
+### Special Properties for Pipeline Creation
+
+When creating a pipeline, include a `stages` property:
+
+```typescript
+{
+  propertyId: "stages",
+  value: Array<{
+    title: string
+    type: 'AWARENESS' | 'CONNECTION' | 'NEEDS_IDENTIFICATION' | 'EVALUATION' | 'CONSIDERATION_NEGOTIATION' | 'CLOSED_WON' | 'CLOSED_LOST'
+    description?: string
+    entranceCriteria: string[] // 2-4 observable criteria
+  }>
+}
+```
+
+### Example
+
+```json
+{
+  "objectType": "Pipeline",
+  "propertyUpdates": [
+    {
+      "propertyId": "title",
+      "value": "Sales Pipeline"
+    },
+    {
+      "propertyId": "type",
+      "value": "NEW_CUSTOMER"
+    },
+    {
+      "propertyId": "stages",
+      "value": [
+        {
+          "title": "Demo Scheduled",
+          "type": "CONNECTION",
+          "entranceCriteria": ["Demo meeting booked on calendar"]
+        },
+        {
+          "title": "Closed Won",
+          "type": "CLOSED_WON",
+          "entranceCriteria": ["Contract signed", "Payment received"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## update_object
+
+Update properties or add notes to existing CRM objects.
+
+### Input Schema
+
+```typescript
+{
+  objectId: string; // Required - must know the object ID
+  objectType: NativeObjectType;
+  updateDescription: string; // Description of the requested update
+}
+```
+
+### Example
+
+```json
+{
+  "objectId": "person_123",
+  "objectType": "Person",
+  "updateDescription": "Update job title to Senior Software Engineer and add note about promotion"
+}
+```
+
+---
+
+## analyze_before_create_or_update
+
+Analyze available properties before creating or updating CRM objects.
+
+### Input Schema
+
+```typescript
+{
+  objectType: NativeObjectType
+  objectId?: string // For updates
+  contextString: string // Information about the object
+}
+```
+
+### Example
+
+```json
+{
+  "objectType": "Opportunity",
+  "contextString": "Create opportunity for Acme Corp, owner: john@company.com, in awareness stage"
+}
+```
+
+---
+
+## create_page
+
+Create a new page with formatted content.
+
+### Input Schema
+
+```typescript
+{
+  title: string
+  pageHtmlContent: string // HTML content following specific formatting rules
+  publishedForUserAt?: string // ISO datetime for sharing, null for private
+  isTemplate?: boolean // Whether this is a template
+}
+```
+
+### HTML Formatting Rules
+
+- Tables: Use clean HTML without inline styles
+- Structure: Use semantic HTML (h2, h3, p, ul, ol), never h1
+- Objects: Reference with `<span data-object-id="id" data-object-type="type">Name</span>`
+- Never use style attributes, class attributes, or markdown syntax
+
+### Example
+
+```json
+{
+  "title": "Meeting Notes - Acme Corp",
+  "pageHtmlContent": "<h2>Overview</h2><p>Discussion about enterprise features.</p><h3>Action Items</h3><ul><li>Send proposal by Friday</li></ul>",
+  "publishedForUserAt": "2024-01-15T10:00:00Z"
+}
+```
+
+---
+
+## update_page
+
+Update an existing page's content or sharing status.
+
+### Input Schema
+
+```typescript
+{
+  pageId: string // Required - must be from previous create_page or search
+  title?: string
+  pageHtmlContent?: string // Same formatting rules as create_page
+  publishedForUserAt?: string | null // Omit to keep current, null to make private
+}
+```
+
+### Example
+
+```json
+{
+  "pageId": "page_123",
+  "title": "Updated Meeting Notes",
+  "pageHtmlContent": "<h2>Updated Content</h2><p>New information added.</p>"
+}
+```
+
+---
+
+## create_email_draft
+
+Create an email draft for later sending.
+
+### Input Schema
+
+```typescript
+{
+  to: string[] // Required - recipient email addresses
+  cc?: string[]
+  bcc?: string[]
+  subject: string // Required
+  htmlBody: string // Required - HTML formatted email body
+  inReplyTo?: string // Thread ID for replies
+}
+```
+
+### Example
+
+```json
+{
+  "to": ["john@example.com", "jane@example.com"],
+  "subject": "Project Update",
+  "htmlBody": "<p>Hi team,</p><p>Here's the latest update on our project...</p>"
+}
+```
+
+---
+
+## send_email
+
+Send a previously created email draft.
+
+### Input Schema
+
+```typescript
+{
+  draftId: string; // ID from create_email_draft
+}
+```
+
+### Example
+
+```json
+{
+  "draftId": "draft_123"
+}
+```
+
+---
+
+## create_or_update_workspace_context
+
+Create or update context notes for CRM objects or properties.
+
+### Input Schema
+
+```typescript
+{
+  mode: 'create' | 'update'
+
+  // For updates
+  contextId?: string // Required for update mode
+
+  // Main content
+  plainTextValue: string // Markdown format content
+
+  // For creates only
+  title?: string // Page title (create only)
+  summary?: string // Brief summary (create only)
+  attachmentType?: 'object' | 'property' // Required for create
+  objectType?: NativeObjectType // Required for create
+  objectId?: string // Required for create
+  propertyId?: string // Required if attachmentType is 'property'
+}
+```
+
+### Example
+
+```json
+{
+  "mode": "create",
+  "plainTextValue": "## Important Context\n\nThis customer prefers morning meetings.",
+  "title": "Customer Preferences",
+  "attachmentType": "object",
+  "objectType": "Organization",
+  "objectId": "org_123"
+}
+```
+
+---
+
+## create_or_update_action
+
+Create or update action items (tasks).
+
+### Input Schema
+
+```typescript
+{
+  actionId?: string // For updates
+  title?: string // Required for creates, format: "[Person] needs [action]"
+  assignedToAssistant: boolean // Required for creates
+  executeAt?: string // ISO datetime for execution
+  ownerEmail?: string // Required when assignedToAssistant is false
+  description?: string
+  descriptionPoints?: string[] // Preferred over description
+  dueDate?: string // ISO datetime
+  type?: 'FOLLOW_UP' | 'SUPPORT'
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH'
+  status?: 'UNREAD' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED'
+  people?: string[] // Email addresses
+  domains?: string[] // Organization domains
+  opportunityIds?: string[] // Related opportunity IDs
+  actionUserInputDetails?: string
+}
+```
+
+### Example
+
+```json
+{
+  "title": "Sarah needs contract clarification",
+  "assignedToAssistant": false,
+  "ownerEmail": "sarah@company.com",
+  "descriptionPoints": [
+    "Sarah needs: contract terms clarification",
+    "How: email response",
+    "From: legal team on Mon 1/15",
+    "Why: deal closing this week"
+  ],
+  "dueDate": "2024-01-20T17:00:00Z",
+  "priority": "HIGH",
+  "people": ["client@example.com"],
+  "opportunityIds": ["opp_123"]
+}
+```
+
+---
+
+## create_view
+
+Create custom views for CRM data with filters and sorting.
+
+### Input Schema
+
+```typescript
+{
+  objectType: 'Person' | 'Organization' | 'Opportunity'
+  title: string
+  description: string
+  columns?: Array<{
+    field: string // Property ID
+    headerName?: string
+    width?: number
+    visible?: boolean // default: true
+  }>
+  filters?: Array<{
+    field: string
+    operator: 'contains' | 'equals' | 'startsWith' | 'endsWith' | 'isEmpty' | 'isNotEmpty' | '>' | '<' | '>=' | '<=' | '!=' | 'is' | 'not' | 'after' | 'before' | 'onOrAfter' | 'onOrBefore'
+    value?: any
+  }>
+  sorting?: Array<{
+    field: string
+    sort: 'asc' | 'desc'
+  }>
+  groupBy?: string[] // Property IDs to group by
+}
+```
+
+### Example
+
+```json
+{
+  "objectType": "Opportunity",
+  "title": "High-Value Pipeline",
+  "description": "Opportunities over $50k",
+  "columns": [
+    { "field": "title", "width": 200 },
+    { "field": "expectedRevenue", "width": 150 },
+    { "field": "stage", "width": 150 }
+  ],
+  "filters": [{ "field": "expectedRevenue", "operator": ">=", "value": 50000 }],
+  "sorting": [{ "field": "expectedRevenue", "sort": "desc" }]
+}
+```
+
+---
+
+## create_chart
+
+Create data visualization charts.
+
+### Input Schema
+
+```typescript
+{
+  chartType: 'bar' | 'line' | 'pie' | 'scatter' | 'area'
+  title: string
+  description?: string
+  data: {
+    series: Array<{
+      data: number[] // Numeric values
+      label: string // Series name
+      id?: string
+      stack?: string // For stacked charts
+      color?: string // Hex, rgb, named, or semantic color
+    }>
+    xAxis?: {
+      data?: string[] // Category labels
+      label?: string
+      scaleType?: 'band' | 'linear' | 'log' | 'point' | 'pow' | 'sqrt' | 'time'
+      min?: number
+      max?: number
+    }
+    yAxis?: {
+      label?: string
+      scaleType?: 'band' | 'linear' | 'log' | 'point' | 'pow' | 'sqrt' | 'time'
+      min?: number
+      max?: number
+    }
+  }
+  config?: {
+    width?: number // default: 600
+    height?: number // default: 400
+    colors?: string[] // Color palette
+    colorScheme?: 'default' | 'monochrome' | 'complementary' | 'analogous' | 'triadic' | 'warm' | 'cool' | 'pastel' | 'vibrant'
+    showLegend?: boolean // default: true
+    stacked?: boolean
+    showGrid?: boolean // default: true
+    margin?: {
+      top?: number
+      right?: number
+      bottom?: number
+      left?: number
+    }
+  }
+}
+```
+
+### Example
+
+```json
+{
+  "chartType": "bar",
+  "title": "Quarterly Sales",
+  "data": {
+    "series": [
+      {
+        "data": [45000, 52000, 48000, 61000],
+        "label": "Revenue"
+      }
+    ],
+    "xAxis": {
+      "data": ["Q1", "Q2", "Q3", "Q4"],
+      "label": "Quarter"
+    },
+    "yAxis": {
+      "label": "Revenue ($)"
+    }
+  },
+  "config": {
+    "colorScheme": "default"
+  }
+}
+```
+
+---
+
+## get_meeting_recording_context
+
+Get context from meeting recordings including transcript and summary.
+
+### Input Schema
+
+```typescript
+{
+  meetingRecordingId: string
+  tokenOffset?: number // For pagination, default: 0
+}
+```
+
+### Example
+
+```json
+{
+  "meetingRecordingId": "meeting_123",
+  "tokenOffset": 0
+}
+```
+
+---
+
+## create_meeting_recording_clip
+
+Create a clip from a meeting recording.
+
+### Input Schema
+
+```typescript
+{
+  meetingRecordingId: string
+  startSeconds: number
+  endSeconds: number
+  title: string
+  description?: string
+}
+```
+
+### Example
+
+```json
+{
+  "meetingRecordingId": "meeting_123",
+  "startSeconds": 300,
+  "endSeconds": 360,
+  "title": "Action Item: Update pricing model",
+  "description": "John commits to updating the pricing model"
+}
+```
+
+---
+
+## send_notification
+
+Send notifications via email or Slack.
+
+### Input Schema
+
+```typescript
+{
+  channel: 'email' | 'slack' | 'both'
+  emailSubject?: string // Required for email
+  emailBody?: string // Required for email, HTML format
+  slackParagraphs?: string[] // Required for Slack, plain text
+  reasoning: string // Why sending this notification
+  sendAt?: string // ISO datetime for scheduling
+}
+```
+
+### Example
+
+```json
+{
+  "channel": "both",
+  "emailSubject": "Important Update",
+  "emailBody": "<p>Hi,</p><p>Here's an important update about the project...</p>",
+  "slackParagraphs": [
+    "Important project update:",
+    "The deadline has been moved to next Friday."
+  ],
+  "reasoning": "User requested notification about deadline change"
+}
+```
+
+---
+
+## web_search
+
+Search the web for information.
+
+### Input Schema
+
+```typescript
+{
+  userAnswer: string; // Search query
+  otherImportantDetails: string; // Additional context
+  howDeep: string; // 'VERY_DEEP' | 'MEDIUM' | 'BASIC'
+}
+```
+
+### Example
+
+```json
+{
+  "userAnswer": "latest AI trends in CRM",
+  "otherImportantDetails": "Focus on enterprise solutions and integration capabilities",
+  "howDeep": "MEDIUM"
+}
+```
+
+---
+
+## get_share_url
+
+Get a shareable URL for a CRM object.
+
+### Input Schema
+
+```typescript
+{
+  objectId: string;
+  objectType: "native_meetingrecording" |
+    "native_meetingrecordingclip" |
+    "native_pipeline" |
+    "native_view" |
+    "native_page" |
+    "native_thread" |
+    "native_action";
+}
+```
+
+### Example
+
+```json
+{
+  "objectId": "page_123",
+  "objectType": "native_page"
+}
+```
+
+---
+
+## create_custom_property
+
+Create custom properties for organizations or opportunities.
+
+### Input Schema
+
+```typescript
+{
+  objectTypeId: 'native_opportunity' | 'native_organization'
+  propertyTypeId: PropertyType // textarea, integer, float, currency, percent, datetime, url, email, phone, boolean, picklist, multipicklist, etc.
+  name: string
+  description: string
+  aiManaged: boolean // Whether AI can populate
+  useWeb: boolean // MUST be false for opportunities
+  options?: Array<{ // Required for picklist/multipicklist
+    name: string
+    description: string
+  }>
+}
+```
+
+### Example
+
+```json
+{
+  "objectTypeId": "native_organization",
+  "propertyTypeId": "picklist",
+  "name": "Industry Vertical",
+  "description": "The primary industry vertical for this organization",
+  "aiManaged": true,
+  "useWeb": true,
+  "options": [
+    {
+      "name": "Technology",
+      "description": "Software, hardware, and IT services"
+    },
+    {
+      "name": "Healthcare",
+      "description": "Medical, pharmaceutical, and health services"
+    }
+  ]
+}
+```
+
+---
+
+## Notes on Common Patterns
+
+### Object References
+
+Many tools use object references in the format: `workspaceId : objectType : objectId` (with spaces around colons).
+
+### Date Formats
+
+All dates should be in ISO 8601 format: `YYYY-MM-DDTHH:mm:ssZ`
+
+### Email Validation
+
+Email addresses in owner fields must belong to workspace members.
+
+### Property IDs for Custom Properties
+
+- For picklists: Use `custom/{propertyId}/{optionId}`
+- For multipicklists: Create separate updates for each selected option
+
+### Token Limits
+
+Some tools (like get_context_for_objects) return paginated results. Use the tokenOffset parameter to retrieve additional content.
+
+### HTML Content Rules
+
+When providing HTML content:
+
+- No inline styles or style attributes
+- Use semantic HTML tags
+- Tables should be clean without styling
+- Reference CRM objects with data attributes
+
 ## License
 
 MIT License - see LICENSE file for details.
