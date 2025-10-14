@@ -39,6 +39,8 @@ DAY_AI_BASE_URL=https://day.ai
 CLIENT_ID=
 CLIENT_SECRET=
 REFRESH_TOKEN=
+# Optional: Customize the OAuth callback URL (if you need a different host/port)
+# CALLBACK_URL=http://localhost:3000/callback
 ```
 
 ### 3. OAuth Setup
@@ -155,14 +157,15 @@ await setup.run();
 
 ### Environment Variables
 
-| Variable           | Description              | Default          |
-| ------------------ | ------------------------ | ---------------- |
-| `INTEGRATION_NAME` | Name of your integration | Required         |
-| `DAY_AI_BASE_URL`  | Day AI instance URL      | `https://day.ai` |
-| `CLIENT_ID`        | OAuth client ID          | Auto-populated   |
-| `CLIENT_SECRET`    | OAuth client secret      | Auto-populated   |
-| `REFRESH_TOKEN`    | OAuth refresh token      | Auto-populated   |
-| `WORKSPACE_ID`     | Target workspace ID      | Optional         |
+| Variable           | Description                  | Default                          |
+| ------------------ | ---------------------------- | -------------------------------- |
+| `INTEGRATION_NAME` | Name of your integration     | Required                         |
+| `DAY_AI_BASE_URL`  | Day AI instance URL          | `https://day.ai`                 |
+| `CALLBACK_URL`     | OAuth callback URL           | `http://127.0.0.1:8080/callback` |
+| `CLIENT_ID`        | OAuth client ID              | Auto-populated                   |
+| `CLIENT_SECRET`    | OAuth client secret          | Auto-populated                   |
+| `REFRESH_TOKEN`    | OAuth refresh token          | Auto-populated                   |
+| `WORKSPACE_ID`     | Target workspace ID          | Optional                         |
 
 ### Client Configuration
 

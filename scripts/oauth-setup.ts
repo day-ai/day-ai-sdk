@@ -28,13 +28,15 @@ interface TokenResponse {
 class OAuthSetup {
   private baseUrl: string;
   private integrationName: string;
-  private redirectUri = "http://127.0.0.1:8080/callback";
+  private redirectUri: string;
   private server?: http.Server;
 
   constructor() {
     this.baseUrl = process.env.DAY_AI_BASE_URL || "https://day.ai";
     this.integrationName =
       process.env.INTEGRATION_NAME || "Day AI SDK Integration";
+    this.redirectUri =
+      process.env.CALLBACK_URL || "http://127.0.0.1:8080/callback";
 
     if (
       !this.integrationName ||
@@ -179,8 +181,12 @@ class OAuthSetup {
         }
       });
 
-      this.server.listen(8080, "127.0.0.1", () => {
-        console.log("🔧 Callback server started on http://127.0.0.1:8080");
+      const callbackUrl = new URL(this.redirectUri);
+      const port = parseInt(callbackUrl.port) || 8080;
+      const host = callbackUrl.hostname || "127.0.0.1";
+
+      this.server.listen(port, host, () => {
+        console.log(`🔧 Callback server started on ${this.redirectUri}`);
       });
 
       // Timeout after 5 minutes
