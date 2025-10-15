@@ -1,13 +1,13 @@
 # Day AI SDK
 
-A TypeScript/Node.js SDK for integrating with Day AI's platform. This SDK handles OAuth 2.0 authentication with automatic token refresh and provides a clean, authenticated interface for interacting with Day AI's APIs.
+A TypeScript/Node.js SDK for integrating with Day AI's platform. This SDK handles OAuth 2.0 authentication with automatic token refresh and provides a clean, authenticated interface for interacting with Day AI's MCP (Model Context Protocol) tools and APIs.
 
 ## Features
 
 - 🔐 **OAuth 2.0 Integration**: Complete OAuth flow with dynamic client registration
 - 🔄 **Automatic Token Refresh**: Tokens are refreshed automatically on every request
 - 📝 **TypeScript Support**: Full type safety and IntelliSense support
-- 🎯 **GraphQL Ready**: Built-in support for GraphQL queries
+- 🤖 **MCP Tool Support**: Built-in Model Context Protocol (MCP) tools for AI assistants
 - ⚙️ **Environment Configuration**: Easy setup with `.env` files
 - 🛡️ **Error Handling**: Comprehensive error handling and logging
 
@@ -58,11 +58,18 @@ This will:
 3. Exchange the authorization code for tokens
 4. Update your `.env` file with the credentials
 
-### 4. Test Your Integration
+### 4. Test Your Integration with MCP Tools
 
 ```bash
 yarn example:mcp
 ```
+
+This will demonstrate the MCP tool capabilities including:
+
+- Listing available tools
+- Searching for objects
+- Getting context for CRM objects
+- And more!
 
 ## Usage
 
@@ -83,7 +90,7 @@ const client = new DayAIClient({
 });
 ```
 
-### Making API Requests
+### Using MCP Tools
 
 ```typescript
 // Test connection
@@ -92,26 +99,25 @@ if (!connectionTest.success) {
   throw new Error("Connection failed: " + connectionTest.error);
 }
 
-// Get workspace metadata
-const metadata = await client.getWorkspaceMetadata();
-console.log("Workspace:", metadata.data.workspaceName);
+// Initialize MCP connection
+await client.mcpInitialize();
 
-// Make a REST API call to any Day AI endpoint
-const response = await client.request("/api/graphql", {
-  method: "POST",
-  body: JSON.stringify({
-    query: "query { /* your GraphQL query here */ }",
-    variables: {},
-  }),
+// List available tools
+const tools = await client.mcpListTools();
+console.log("Available MCP tools:", tools.data?.tools);
+
+// Call a specific tool - example: search for contacts
+const searchResult = await client.mcpCallTool("search_objects", {
+  queries: [
+    {
+      objectType: "Person",
+      where: {
+        email: { contains: "@company.com" },
+      },
+      take: 10,
+    },
+  ],
 });
-
-// Make a GraphQL query (wrapper for the above)
-const graphqlResult = await client.graphql(`
-  query YourQuery {
-    # Use your actual Day AI GraphQL schema here
-    # This SDK doesn't assume what endpoints are available
-  }
-`);
 ```
 
 ### Error Handling
@@ -157,15 +163,15 @@ await setup.run();
 
 ### Environment Variables
 
-| Variable           | Description                  | Default                          |
-| ------------------ | ---------------------------- | -------------------------------- |
-| `INTEGRATION_NAME` | Name of your integration     | Required                         |
-| `DAY_AI_BASE_URL`  | Day AI instance URL          | `https://day.ai`                 |
-| `CALLBACK_URL`     | OAuth callback URL           | `http://127.0.0.1:8080/callback` |
-| `CLIENT_ID`        | OAuth client ID              | Auto-populated                   |
-| `CLIENT_SECRET`    | OAuth client secret          | Auto-populated                   |
-| `REFRESH_TOKEN`    | OAuth refresh token          | Auto-populated                   |
-| `WORKSPACE_ID`     | Target workspace ID          | Optional                         |
+| Variable           | Description              | Default                          |
+| ------------------ | ------------------------ | -------------------------------- |
+| `INTEGRATION_NAME` | Name of your integration | Required                         |
+| `DAY_AI_BASE_URL`  | Day AI instance URL      | `https://day.ai`                 |
+| `CALLBACK_URL`     | OAuth callback URL       | `http://127.0.0.1:8080/callback` |
+| `CLIENT_ID`        | OAuth client ID          | Auto-populated                   |
+| `CLIENT_SECRET`    | OAuth client secret      | Auto-populated                   |
+| `REFRESH_TOKEN`    | OAuth refresh token      | Auto-populated                   |
+| `WORKSPACE_ID`     | Target workspace ID      | Optional                         |
 
 ### Client Configuration
 
@@ -205,24 +211,6 @@ if (test.success) {
   console.log("Workspace:", test.data.workspace.workspaceName);
 } else {
   console.error("❌ Connection failed:", test.error);
-}
-```
-
-### Using the API
-
-```typescript
-// The SDK provides authenticated access to Day AI's API
-// You'll need to consult Day AI's API documentation for available endpoints
-
-// Example: Make any authenticated request
-const apiResponse = await client.request("/api/some-day-ai-endpoint", {
-  method: "GET",
-});
-
-if (apiResponse.success) {
-  console.log("API Response:", apiResponse.data);
-} else {
-  console.error("API Error:", apiResponse.error);
 }
 ```
 
@@ -286,45 +274,6 @@ The SDK automatically handles token refresh:
 - No manual token management required
 - 60-second buffer before token expiry
 
-## Error Handling
-
-Common error scenarios:
-
-```typescript
-// Network/connection errors
-const result = await client.request("/api/endpoint");
-if (!result.success) {
-  if (result.error.includes("ECONNREFUSED")) {
-    console.error("Cannot connect to Day AI - check your baseUrl");
-  }
-}
-
-// Authentication errors
-const graphql = await client.graphql("query { ... }");
-if (!graphql.success) {
-  if (graphql.error.includes("401")) {
-    console.error("Authentication failed - check your credentials");
-  }
-}
-```
-
-## Development
-
-### Project Structure
-
-```
-day-ai-sdk/
-├── src/
-│   ├── client.ts          # Main SDK client
-│   └── index.ts           # Public exports
-├── scripts/
-│   └── oauth-setup.ts     # OAuth setup wizard
-├── examples/
-│   └── basic-example.ts   # Usage examples
-├── dist/                  # Compiled JavaScript
-└── .env.example          # Environment template
-```
-
 ### Building from Source
 
 ```bash
@@ -340,9 +289,6 @@ yarn build
 
 **Problem**: "Please set INTEGRATION_NAME in your .env file"
 **Solution**: Copy `.env.example` to `.env` and set `INTEGRATION_NAME`
-
-**Problem**: "Failed to register client"
-**Solution**: Check that `DAY_AI_BASE_URL` points to the correct Day AI instance
 
 **Problem**: "Authorization timeout"
 **Solution**: Complete the browser authorization within 5 minutes
