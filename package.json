@@ -11,6 +11,7 @@
     "oauth:refresh": "node dist/scripts/oauth-refresh.js",
     "example:mcp": "node dist/examples/mcp-tool-example.js",
     "example:meetings": "node dist/examples/recent-meetings-context.js",
+    "example:pagination": "node dist/examples/pagination-example.js",
     "test": "yarn build && node dist/scripts/run-tests.js all",
     "test:tool": "yarn build && node dist/scripts/run-tests.js tool",
     "test:file": "yarn build && node dist/scripts/run-tests.js file"
