@@ -10,7 +10,10 @@
     "oauth:setup": "node dist/scripts/oauth-setup.js",
     "oauth:refresh": "node dist/scripts/oauth-refresh.js",
     "example:mcp": "node dist/examples/mcp-tool-example.js",
-    "example:meetings": "node dist/examples/recent-meetings-context.js"
+    "example:meetings": "node dist/examples/recent-meetings-context.js",
+    "test": "yarn build && node dist/scripts/run-tests.js all",
+    "test:tool": "yarn build && node dist/scripts/run-tests.js tool",
+    "test:file": "yarn build && node dist/scripts/run-tests.js file"
   },
   "dependencies": {
     "dotenv": "^16.3.1",

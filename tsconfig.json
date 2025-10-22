@@ -18,7 +18,8 @@
   "include": [
     "src/**/*",
     "scripts/**/*",
-    "examples/**/*"
+    "examples/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",
