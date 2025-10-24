@@ -114,7 +114,6 @@ const searchResult = await client.mcpCallTool("search_objects", {
       where: {
         email: { contains: "@company.com" },
       },
-      take: 10,
     },
   ],
 });
@@ -277,21 +276,19 @@ Pagination in the Day AI SDK operates at the **top level** of the response, not 
 
 - When querying multiple object types, pagination applies to the entire response
 - Results are automatically paginated when they exceed the 20,000 token limit
-- You control the initial result size with the `take` parameter in each query
 - You fetch the next page using the `offset` parameter at the top level
 
 ### Pagination Parameters & Response Fields
 
 | Field        | Location     | Type    | Description                                        |
 | ------------ | ------------ | ------- | -------------------------------------------------- |
-| `take`       | Query param  | number  | Limit results per query (default: 50, max: 100)    |
 | `offset`     | Request      | number  | Starting position for pagination (top-level)       |
 | `hasMore`    | Response     | boolean | Indicates if more results are available            |
 | `nextOffset` | Response     | number  | Value to use for the `offset` in the next request |
 | `totalCount` | Per object   | number  | Total results available for that object type       |
 | `results`    | Per object   | array   | Array of returned objects for that type            |
 
-### Example: Basic Pagination (Using Defaults)
+### Example: Basic Pagination
 
 ```typescript
 import { DayAIClient } from "day-ai-sdk";
@@ -299,12 +296,11 @@ import { DayAIClient } from "day-ai-sdk";
 const client = new DayAIClient();
 await client.mcpInitialize();
 
-// First request - uses default page size (50 results)
+// First request
 const firstPage = await client.mcpCallTool("search_objects", {
   queries: [
     {
       objectType: "native_contact",
-      // No 'take' specified - defaults to 50 results
     },
   ],
 });
@@ -317,7 +313,7 @@ const firstPageData = JSON.parse(firstPage.data?.content[0]?.text);
 //   "nextOffset": 50,              // ← Top-level: use this for next request
 //   "native_contact": {
 //     "totalCount": 50,            // ← Total in this page
-//     "results": [                 // ← Array of 50 contacts
+//     "results": [                 // ← Array of contacts
 //       {
 //         "objectId": "person@example.com",
 //         "title": "person@example.com",
@@ -353,37 +349,6 @@ if (firstPageData.hasMore) {
 }
 ```
 
-### Example: Pagination with Custom Page Size
-
-```typescript
-// Request exactly 10 results per page using 'take'
-const response = await client.mcpCallTool("search_objects", {
-  queries: [
-    {
-      objectType: "native_meetingrecording",
-      take: 10, // OPTIONAL: Override default (50) - remove this line to use default
-    },
-  ],
-});
-
-const data = JSON.parse(response.data?.content[0]?.text);
-
-// Response structure is the same:
-// {
-//   "hasMore": true,
-//   "nextOffset": 50,
-//   "native_meetingrecording": {
-//     "totalCount": 50,
-//     "results": [ ... ] // 50 results returned
-//   }
-// }
-
-console.log(`Results: ${data.native_meetingrecording.results.length}`);
-console.log(`Next offset: ${data.nextOffset}`);
-```
-
-> **💡 Note:** The `take` parameter is optional. Remove it entirely to use the default page size of 50 results.
-
 ### Example: Paginating Through All Results
 
 ```typescript
@@ -402,7 +367,6 @@ async function getAllMeetingRecordings() {
       queries: [
         {
           objectType: "native_meetingrecording",
-          take: 100, // OPTIONAL: Max per request - remove to use default (50)
         },
       ],
     });
@@ -428,23 +392,19 @@ const allRecordings = await getAllMeetingRecordings();
 console.log(`Total recordings retrieved: ${allRecordings.length}`);
 ```
 
-> **💡 Note:** The `take` parameter is optional. Remove it to use the default (50 results per page). Using `take: 100` fetches the maximum allowed per request, reducing the total number of API calls needed.
-
 ### Example: Multi-Object Pagination
 
 When searching multiple object types, pagination applies to the entire response:
 
 ```typescript
-// Search two object types - both use default page size (50)
+// Search two object types
 const response = await client.mcpCallTool("search_objects", {
   queries: [
     {
       objectType: "native_organization",
-      // No 'take' - defaults to 50
     },
     {
       objectType: "native_opportunity",
-      // No 'take' - defaults to 50
     },
   ],
   timeframeStart: "2025-01-01T00:00:00Z",
@@ -459,11 +419,11 @@ const data = JSON.parse(response.data?.content[0]?.text);
 //   "nextOffset": 50,               // ← Use for next page of BOTH object types
 //   "native_organization": {
 //     "totalCount": 50,
-//     "results": [ ... ]            // 50 organizations
+//     "results": [ ... ]            // organizations
 //   },
 //   "native_opportunity": {
 //     "totalCount": 50,
-//     "results": [ ... ]            // 50 opportunities
+//     "results": [ ... ]            // opportunities
 //   }
 // }
 
@@ -494,10 +454,9 @@ if (data.hasMore) {
 
 1. **Always check `hasMore`** before attempting to fetch the next page
 2. **Use `nextOffset`** from the response rather than calculating your own offset
-3. **Set appropriate `take` values** to balance between request count and response size
-4. **Handle the end of results** gracefully when `hasMore` is `false` or `undefined`
-5. **Consider token limits** - responses exceeding 20,000 tokens will automatically paginate
-6. **Monitor `totalCount`** per object type to understand the full dataset size
+3. **Handle the end of results** gracefully when `hasMore` is `false` or `undefined`
+4. **Consider token limits** - responses exceeding 20,000 tokens will automatically paginate
+5. **Monitor `totalCount`** per object type to understand the full dataset size
 
 ### Pagination with Filters and Timeframes
 
@@ -519,7 +478,6 @@ while (hasMore) {
           operator: "contains",
           value: "standup",
         },
-        take: 50, // OPTIONAL - remove to use default page size
       },
     ],
     timeframeStart: sevenDaysAgo.toISOString(),
@@ -535,8 +493,6 @@ while (hasMore) {
   offset = data.nextOffset;
 }
 ```
-
-> **💡 Note:** The `take` parameter is optional in all queries. Omit it to use the default page size of 50 results.
 
 ### See Also
 
@@ -676,7 +632,6 @@ Search for CRM objects using complex queries with filters and conditions.
     orderBy?: Array<{
       [propertyName: string]: "asc" | "desc";
     }>;
-    take?: number; // Limit results (default: 10, max: 100)
     skip?: number; // Offset for pagination
   }>;
 }
@@ -695,8 +650,7 @@ Search for CRM objects using complex queries with filters and conditions.
           { "jobTitle": { "contains": "Engineer" } }
         ]
       },
-      "orderBy": [{ "lastName": "asc" }],
-      "take": 20
+      "orderBy": [{ "lastName": "asc" }]
     }
   ]
 }

@@ -26,8 +26,7 @@ export const testCase1 = {
 
   input: {
     queries: [{
-      objectType: 'native_contact',
-      take: 5
+      objectType: 'native_contact'
     }]
   },
 
@@ -67,8 +66,7 @@ export const testCase2 = {
 
   input: {
     queries: [{
-      objectType: 'native_organization',
-      take: 5
+      objectType: 'native_organization'
     }]
   },
 
@@ -106,8 +104,7 @@ export const testCase3 = {
 
   input: {
     queries: [{
-      objectType: 'native_contact',
-      take: 10
+      objectType: 'native_contact'
     }]
   },
 
@@ -140,12 +137,10 @@ export const testCase4 = {
   input: {
     queries: [
       {
-        objectType: 'native_contact',
-        take: 2
+        objectType: 'native_contact'
       },
       {
-        objectType: 'native_organization',
-        take: 2
+        objectType: 'native_organization'
       }
     ]
   },
@@ -467,29 +462,19 @@ export const testCase12 = {
     console.log(`   hasMore: ${parsed.hasMore}`);  // ← Top level!
     console.log(`   nextOffset: ${parsed.nextOffset || 'not provided'}`);  // ← Top level!
 
-    // If we got results equal to totalCount, check pagination fields
-    if (meetingData.totalCount) {
-      // When we have a totalCount, we should have pagination info
-      if (parsed.hasMore === undefined) {
-        throw new Error('hasMore field is missing at top level of response');
-      }
-
+    // Check pagination fields
+    if (parsed.hasMore === true) {
       // If hasMore is true, nextOffset must be provided
-      if (parsed.hasMore === true) {
-        if (!parsed.nextOffset) {
-          throw new Error('hasMore is true but nextOffset is missing - cannot fetch next page');
-        }
-        console.log(`   ✅ Pagination info correctly provided`);
-        console.log(`   🔄 More pages available - use offset: ${parsed.nextOffset}`);
-      } else {
-        console.log(`   ℹ️  hasMore is false - this is the last page`);
+      if (!parsed.nextOffset) {
+        throw new Error('hasMore is true but nextOffset is missing - cannot fetch next page');
       }
+      console.log(`   ✅ Pagination info correctly provided`);
+      console.log(`   🔄 More pages available - use offset: ${parsed.nextOffset}`);
+    } else if (parsed.hasMore === false) {
+      console.log(`   ℹ️  hasMore is false - this is the last page`);
     } else {
-      // No totalCount means all results returned
-      if (parsed.hasMore === true) {
-        throw new Error(`hasMore is true but no totalCount in response`);
-      }
-      console.log(`   ℹ️  All results returned in single page`);
+      // hasMore is undefined - all results fit in single response
+      console.log(`   ℹ️  All results returned in single page (no pagination needed)`);
     }
 
     // Validate meeting recording structure

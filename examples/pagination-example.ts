@@ -62,13 +62,13 @@ async function main() {
     console.log('✅ MCP connection initialized\n');
 
     // =============================================================================
-    // Example 1: Basic Pagination WITHOUT 'take' - Uses Default (50 results)
+    // Example 1: Basic Pagination
     // =============================================================================
     console.log('=' .repeat(70));
-    console.log('📖 EXAMPLE 1: Basic Pagination Without "take" Parameter');
+    console.log('📖 EXAMPLE 1: Basic Pagination');
     console.log('=' .repeat(70) + '\n');
 
-    console.log('REQUEST (no "take" parameter - uses default):');
+    console.log('REQUEST:');
     console.log(JSON.stringify({
       queries: [{
         objectType: 'native_contact'
@@ -79,7 +79,6 @@ async function main() {
     const firstPageResponse = await client.mcpCallTool('search_objects', {
       queries: [{
         objectType: 'native_contact'
-        // No 'take' specified - defaults to 50 results
       }]
     });
 
@@ -106,9 +105,8 @@ async function main() {
       });
     }
 
-    console.log(`\n💡 Default page size is 50 results`);
     if (firstPageData.hasMore) {
-      console.log(`💡 To get the next page, use: offset: ${firstPageData.nextOffset}`);
+      console.log(`\n💡 To get the next page, use: offset: ${firstPageData.nextOffset}`);
     }
 
     // =============================================================================
@@ -132,7 +130,6 @@ async function main() {
         offset: firstPageData.nextOffset,  // Use nextOffset from first page
         queries: [{
           objectType: 'native_contact'
-          // Still no 'take' - uses default
         }]
       });
 
@@ -167,8 +164,6 @@ async function main() {
     let pageNum = 0;
 
     console.log('Fetching all meeting recordings (may take a moment)...\n');
-    console.log('💡 NOTE: This example uses take: 50 to limit results.');
-    console.log('   Remove the "take" parameter to use the default page size.\n');
 
     while (hasMore) {
       pageNum++;
@@ -176,8 +171,7 @@ async function main() {
       const response = await client.mcpCallTool('search_objects', {
         offset: currentOffset,
         queries: [{
-          objectType: 'native_meetingrecording',
-          take: 50  // OPTIONAL - remove this line to use default page size
+          objectType: 'native_meetingrecording'
         }]
       });
 
@@ -202,10 +196,10 @@ async function main() {
     console.log(`\n✅ Finished! Retrieved ${allMeetings.length} total meeting recordings`);
 
     // =============================================================================
-    // Example 4: Multi-Object Pagination WITHOUT 'take'
+    // Example 4: Multi-Object Pagination
     // =============================================================================
     console.log('\n' + '=' .repeat(70));
-    console.log('📖 EXAMPLE 4: Multi-Object Pagination (No "take" Parameter)');
+    console.log('📖 EXAMPLE 4: Multi-Object Pagination');
     console.log('=' .repeat(70) + '\n');
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -226,11 +220,9 @@ async function main() {
       queries: [
         {
           objectType: 'native_organization'
-          // No 'take' - defaults to 50
         },
         {
           objectType: 'native_opportunity'
-          // No 'take' - defaults to 50
         }
       ],
       timeframeStart: thirtyDaysAgo.toISOString(),
@@ -286,8 +278,6 @@ async function main() {
     console.log('=' .repeat(70) + '\n');
 
     console.log('Searching for contacts with email domain filters...\n');
-    console.log('💡 NOTE: This example uses take: 15 for demonstration.');
-    console.log('   Remove the "take" parameter to use the default (50 results).\n');
 
     const filteredResponse = await client.mcpCallTool('search_objects', {
       queries: [{
@@ -296,8 +286,7 @@ async function main() {
           propertyId: 'email',
           operator: 'contains',
           value: '@'  // Simple filter - has an email
-        },
-        take: 15  // OPTIONAL - remove this line to use default page size
+        }
       }]
     });
 
@@ -331,23 +320,17 @@ Key Takeaways:
    - \`results\`: Array of objects returned
    - \`totalCount\`: Total objects in the current page for that type
 
-3. The \`take\` parameter is OPTIONAL
-   - Default: 50 results per query (when omitted)
-   - Max: 100 results
-   - You can omit \`take\` to use the default page size
-
-4. Pagination works with all features
+3. Pagination works with all features
    - Filters (\`where\` conditions)
    - Timeframes (\`timeframeStart\`, \`timeframeEnd\`)
    - Multiple object types in one request
    - Sorting (\`orderBy\`)
 
-5. Best practices
+4. Best practices
    - Always check \`hasMore\` before fetching next page
    - Use the provided \`nextOffset\` value (don't calculate it yourself)
    - Handle the case where \`hasMore\` is false
    - Add safety limits to prevent infinite loops
-   - You don't need to specify \`take\` unless you want a custom page size
 `);
 
     console.log('✅ Pagination example completed successfully!\n');
