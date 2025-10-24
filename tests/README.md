@@ -71,8 +71,7 @@ export const testCase5 = {
       objectType: 'native_contact',
       where: {
         email: { contains: '@company.com' }
-      },
-      take: 10
+      }
     }]
   },
 
