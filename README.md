@@ -1,6 +1,61 @@
 # Day AI SDK
 
-A TypeScript/Node.js SDK for integrating with Day AI's platform. This SDK handles OAuth 2.0 authentication with automatic token refresh and provides a clean, authenticated interface for interacting with Day AI's MCP (Model Context Protocol) tools and APIs.
+> **Best Way to Get Started**: Clone this repo, `cd` into it, and run `claude code` to ask questions and get support from Claude AI directly in your terminal.
+
+A TypeScript/Node.js SDK for building AI-native applications that integrate with Day AI's CRM platform. This SDK handles OAuth 2.0 authentication with automatic token refresh and provides reusable templates for building AI-powered tools.
+
+## What is Day AI SDK?
+
+Day AI SDK is more than just an SDK - it's a **developer platform for AI-native business tools**.
+
+### The Vision
+
+Day AI is an **AI-native CRM** with rich, contextual business data (contacts, opportunities, meetings, transcripts). This SDK enables developers to build specialized **object-of-work interfaces** that are deeply integrated with the CRM from day one.
+
+Instead of building standalone apps, developers clone example templates and build tools that can instantly query Day AI for context across contacts, opportunities, meetings, and more - all in natural language optimized for LLM agents.
+
+### Why It's Powerful
+
+Traditional CRMs force users into rigid forms and spreadsheet-style data entry. Day AI flips this:
+
+- **Natural language as the data model**: Users write notes like "Urgent Bug Fixes" or "Q1 Opportunities" in freeform text
+- **AI agent has full context**: The agent can read user notes AND query the entire Day AI CRM graph
+- **MCP integration**: 20+ tools for searching, creating, and updating CRM data
+- **Build tools in minutes**: Clone an example app, customize it, and ship
+
+**Example**: A notes app where users can organize information however they want, and the AI agent can answer questions like:
+- "Who reported this bug? Pull their contact history"
+- "What opportunities are blocked by this?"
+- "When did we discuss this in meetings?"
+
+All in natural language, with full CRM context, because the MCP tools expose the entire data graph.
+
+## Getting Started with Claude Code
+
+**The fastest way to understand and customize this SDK is with Claude Code:**
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd day-ai-sdk
+
+# Start Claude Code (requires Claude Code CLI)
+claude code
+```
+
+Once in Claude Code, you can ask questions like:
+- "How do I run the desktop example?"
+- "Show me how to add a new native tool"
+- "Help me customize the notes app for bug tracking"
+- "How does the OAuth flow work?"
+
+Claude has full context on this codebase and can help you build, debug, and customize.
+
+---
+
+## What's Included
+
+This SDK provides OAuth 2.0 authentication with automatic token refresh and a clean interface for interacting with Day AI's MCP (Model Context Protocol) tools and APIs.
 
 ## Features
 
@@ -10,6 +65,40 @@ A TypeScript/Node.js SDK for integrating with Day AI's platform. This SDK handle
 - 🤖 **MCP Tool Support**: Built-in Model Context Protocol (MCP) tools for AI assistants
 - ⚙️ **Environment Configuration**: Easy setup with `.env` files
 - 🛡️ **Error Handling**: Comprehensive error handling and logging
+- 🎨 **Example Apps**: Production-ready templates you can clone and customize
+
+## Example Apps
+
+### Desktop Notes App (`examples/desktop/`)
+
+A fully-featured **Electron desktop app** that demonstrates the full power of Day AI integration. This isn't just a demo - it's a **production-ready template** you can clone to build your own AI-powered tools.
+
+**Features:**
+- **Left Sidebar**: Notes list with create, search, delete
+- **Center Panel**: Rich text editor for notes
+- **Right Sidebar**: Claude AI chat with streaming responses
+- **Settings**: Anthropic API key + Day AI OAuth connection
+- **MCP Integration**: AI agent can query Day AI CRM (contacts, opportunities, meetings)
+- **Native Tools**: AI can directly read/update notes
+
+**Architecture:**
+- Electron main process handles IPC, OAuth, MCP client, Claude SDK
+- React + TypeScript + Tailwind UI with glass-morphism dark theme
+- Streaming chat with tool use (native + MCP tools)
+- Full TypeScript types throughout
+
+**Use Cases:**
+- Clone this template to build: bug trackers, opportunity managers, meeting prep tools, task lists, etc.
+- Keep the 3-panel layout, swap "notes" for your object type
+- Add your own native tools alongside Day AI's MCP tools
+- Ship in minutes, not weeks
+
+**Try it:**
+```bash
+cd examples/desktop
+npm install
+npm run dev
+```
 
 ## Quick Start
 
@@ -517,6 +606,31 @@ cd day-ai-sdk
 yarn install
 yarn build
 ```
+
+## Support & Questions
+
+### Using Claude Code (Recommended)
+
+The **best way to get help** is to use Claude Code:
+
+```bash
+cd day-ai-sdk
+claude code
+```
+
+Ask Claude anything:
+- "How do I add a new MCP tool call?"
+- "Show me how the OAuth flow works"
+- "Help me debug this error: [paste error]"
+- "How do I customize the desktop app for [use case]?"
+
+Claude has full context on this codebase and can help you build, debug, and ship faster.
+
+### Documentation
+
+- **CLAUDE.md**: Quick reference for Claude sessions (also useful for developers)
+- **SCHEMA.md**: Full Day AI object schemas and MCP tool documentation
+- **examples/desktop/README.md**: Desktop app specific documentation
 
 ## Troubleshooting
 
