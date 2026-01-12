@@ -51,6 +51,24 @@ Once in Claude Code, you can ask questions like:
 
 Claude has full context on this codebase and can help you build, debug, and customize.
 
+### Building Your Own App
+
+Ready to build your own AI-powered app? Use the `/app` command in Claude Code:
+
+```bash
+# In Claude Code
+/app
+```
+
+Claude will guide you through:
+1. Understanding your goal and choosing the right template
+2. Planning your object-of-work and native tools
+3. Selecting Day AI MCP tools to integrate
+4. Implementing step-by-step
+5. Testing and deploying
+
+The example apps are **production-ready templates**, not just demos. Clone one, customize it for your use case, and ship in hours.
+
 ---
 
 ## What's Included
@@ -96,6 +114,41 @@ A fully-featured **Electron desktop app** that demonstrates the full power of Da
 **Try it:**
 ```bash
 cd examples/desktop
+npm install
+npm run dev
+```
+
+### Vercel Weather Cron (`examples/vercel-weather-cron/`)
+
+A simple **Next.js app** that demonstrates **Vercel Cron Jobs** + **Day AI automation**. Every day at 9 AM, this app fetches the weather and emails you via Day AI's `send_notification` MCP tool.
+
+**Features:**
+- **Vercel Cron**: Automated daily job (no server management)
+- **Weather API**: Fetches current weather from OpenWeather
+- **Email Notification**: Uses Day AI's `send_notification` tool
+- **Manual Trigger**: Test button to run sync immediately
+- **Simple Dashboard**: Shows status and last run
+
+**Architecture:**
+- Next.js 14 (App Router) with Node.js runtime
+- Vercel Cron for scheduling
+- Day AI SDK for MCP integration
+- OpenWeather API for weather data
+- Liquid glass dark mode UI with custom background
+
+**Use Cases:**
+- Clone this template to build: daily digests, scheduled reports, monitoring alerts, data enrichment crons
+- Replace weather API with any data source (stocks, news, social media, etc.)
+- Use different MCP tools (create records, update properties, send Slack messages)
+- Ship automated workflows in minutes
+
+**Deploy it:**
+```bash
+# One-click deploy to Vercel
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=...)
+
+# Or run locally
+cd examples/vercel-weather-cron
 npm install
 npm run dev
 ```

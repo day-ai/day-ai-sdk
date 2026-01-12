@@ -32,7 +32,7 @@ Contacts, Opportunities, Meetings, Pages, etc.
 - **MCP Tools**: 20+ tools for CRM operations (search, create, update, get context)
 - Full TypeScript types and error handling
 
-### Example: Desktop App (`examples/desktop/`)
+### Example 1: Desktop App (`examples/desktop/`)
 - **Electron** app with React + TypeScript + Tailwind
 - **Left sidebar**: Notes list (CRUD operations)
 - **Center**: Rich text editor for notes
@@ -42,6 +42,15 @@ Contacts, Opportunities, Meetings, Pages, etc.
 
 This is a **template** - clone it to build bug trackers, opportunity managers, meeting prep tools, etc.
 
+### Example 2: Vercel Weather Cron (`examples/vercel-weather-cron/`)
+- **Next.js** app with Vercel Cron Jobs
+- **Automated workflow**: Fetches weather daily at 9 AM
+- **Email notification**: Uses Day AI's `send_notification` MCP tool
+- **Simple dashboard**: Manual trigger and status display
+- **Zero server management**: Runs on Vercel's edge
+
+This is a **template** - clone it to build daily digests, scheduled reports, monitoring alerts, data enrichment crons, etc.
+
 ## File Structure
 
 ```
@@ -50,17 +59,27 @@ day-ai-sdk/
 │   ├── DayAIClient.ts   # Main client with OAuth + MCP
 │   └── types.ts         # TypeScript types
 ├── examples/
-│   └── desktop/         # Electron notes app (template)
-│       ├── electron/    # Main process (IPC, services)
-│       │   ├── main.ts
-│       │   └── services/
-│       │       ├── AgentService.ts      # Claude SDK integration
-│       │       ├── OAuthService.ts      # Day AI OAuth
-│       │       ├── MCPClientService.ts  # MCP client
-│       │       └── ToolExecutor.ts      # Native + MCP tool execution
-│       └── src/         # Renderer (React UI)
-│           ├── App.tsx
-│           └── components/
+│   ├── desktop/         # Electron notes app (template)
+│   │   ├── electron/    # Main process (IPC, services)
+│   │   │   ├── main.ts
+│   │   │   └── services/
+│   │   │       ├── AgentService.ts      # Claude SDK integration
+│   │   │       ├── OAuthService.ts      # Day AI OAuth
+│   │   │       ├── MCPClientService.ts  # MCP client
+│   │   │       └── ToolExecutor.ts      # Native + MCP tool execution
+│   │   └── src/         # Renderer (React UI)
+│   │       ├── App.tsx
+│   │       └── components/
+│   └── vercel-weather-cron/  # Vercel cron automation (template)
+│       ├── app/
+│       │   ├── page.tsx             # Dashboard UI
+│       │   └── api/
+│       │       ├── cron/weather/    # Cron job endpoint
+│       │       └── manual-sync/     # Manual trigger
+│       ├── lib/
+│       │   ├── dayai.ts             # Day AI client
+│       │   └── weather.ts           # Weather API
+│       └── vercel.json              # Cron config
 ├── scripts/
 │   └── oauth-setup.ts   # CLI OAuth wizard
 └── SCHEMA.md            # Day AI object schemas
@@ -73,6 +92,21 @@ day-ai-sdk/
 cd examples/desktop
 npm install
 npm run dev
+```
+
+### Run the Vercel Example Locally
+```bash
+cd examples/vercel-weather-cron
+npm install
+npm run dev
+# Visit http://localhost:3000
+```
+
+### Deploy Vercel Example
+```bash
+cd examples/vercel-weather-cron
+vercel
+# Set environment variables in Vercel dashboard
 ```
 
 ### Add/Modify Features

@@ -18,11 +18,11 @@
   "include": [
     "src/**/*",
     "scripts/**/*",
-    "examples/**/*",
     "tests/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "examples"
   ]
 }
