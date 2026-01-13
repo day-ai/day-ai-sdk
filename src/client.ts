@@ -360,16 +360,6 @@ export class DayAIClient {
     });
   }
 
-  /**
-   * Convenience method to call get_context_for_object
-   */
-  async getContextForObject(
-    emailAddress: string
-  ): Promise<ApiResponse<McpToolResult>> {
-    return this.mcpCallTool('get_context_for_object', {
-      emailAddress,
-    });
-  }
 }
 
 export default DayAIClient;
