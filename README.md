@@ -857,7 +857,7 @@ Filter by object properties:
 {
   propertyId: string;  // Property ID to filter on
   operator: Operator;  // Comparison operator
-  value: string;       // Value to compare against
+  value?: string;      // Value to compare against (optional for isNull/isNotNull)
 }
 ```
 
@@ -871,6 +871,8 @@ Filter by object properties:
 - `startsWith` - string starts with
 - `endsWith` - string ends with
 - `is` - null check
+- `isNull` - field is null/missing (no value required)
+- `isNotNull` - field has a value (no value required)
 
 #### 2. Relationship-Based Filtering
 
