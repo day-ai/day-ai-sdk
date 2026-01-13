@@ -123,13 +123,71 @@ vercel
 ## MCP Tools Available
 
 Day AI provides 20+ MCP tools including:
-- `search_objects` - Query CRM with filters
-- `get_context_for_objects` - Get detailed context
-- `keyword_search` - Keyword-based search
-- `create_or_update_person_organization` - CRUD for contacts
+
+### Search & Query
+- `search_objects` - **Primary search tool** with property AND relationship filtering
+  - Search by properties: `{propertyId, operator, value}`
+  - Search by relationships: `{relationship, targetObjectType, targetObjectId, operator}`
+  - Use `includeRelationships: true` to see connected objects
+  - Use `propertiesToReturn: '*'` for all properties
+- `keyword_search` - Simple keyword-based search
+
+### CRM Operations
+- `create_or_update_person_organization` - CRUD for contacts/companies
 - `create_or_update_opportunity` - CRUD for deals
 - `get_meeting_recording_context` - Meeting transcripts
-- And more (see SCHEMA.md for full list)
+
+### Key Search Patterns
+
+**Find meetings by attendee (relationship search):**
+```typescript
+{
+  queries: [{
+    objectType: 'native_meetingrecording',
+    where: {
+      relationship: 'attendee',
+      targetObjectType: 'native_contact',
+      targetObjectId: 'john@acme.com',  // email for contacts
+      operator: 'eq'
+    }
+  }],
+  includeRelationships: true
+}
+```
+
+**Find meetings with a company:**
+```typescript
+{
+  queries: [{
+    objectType: 'native_meetingrecording',
+    where: {
+      relationship: 'attendee',
+      targetObjectType: 'native_organization',
+      targetObjectId: 'acme.com',  // domain for orgs
+      operator: 'eq'
+    }
+  }],
+  includeRelationships: true
+}
+```
+
+**Find notes on an organization:**
+```typescript
+{
+  queries: [{
+    objectType: 'native_context',
+    where: {
+      relationship: 'parent',
+      targetObjectType: 'native_organization',
+      targetObjectId: 'acme.com',
+      operator: 'eq'
+    }
+  }],
+  includeRelationships: true
+}
+```
+
+See SCHEMA.md for full tool list and relationship definitions.
 
 ## Important Patterns
 

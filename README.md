@@ -248,16 +248,35 @@ await client.mcpInitialize();
 const tools = await client.mcpListTools();
 console.log("Available MCP tools:", tools.data?.tools);
 
-// Call a specific tool - example: search for contacts
+// Call a specific tool - example: search for contacts by email domain
 const searchResult = await client.mcpCallTool("search_objects", {
   queries: [
     {
-      objectType: "Person",
+      objectType: "native_contact",
       where: {
-        email: { contains: "@company.com" },
+        propertyId: "email",
+        operator: "contains",
+        value: "@company.com",
       },
     },
   ],
+});
+
+// Example: Find meetings with a specific person (relationship-based search)
+const meetingsResult = await client.mcpCallTool("search_objects", {
+  queries: [
+    {
+      objectType: "native_meetingrecording",
+      where: {
+        relationship: "attendee",
+        targetObjectType: "native_contact",
+        targetObjectId: "john@company.com",
+        operator: "eq",
+      },
+    },
+  ],
+  timeframeStart: "2024-01-01",
+  includeRelationships: true,
 });
 ```
 
@@ -368,34 +387,47 @@ await client.mcpInitialize();
 const tools = await client.mcpListTools();
 console.log("Available tools:", tools.data?.tools);
 
-// Call a specific tool
-const context = await client.mcpCallTool("get_context_for_objects", {
-  objects: [
+// Search for a contact and get all their properties
+const contactSearch = await client.mcpCallTool("search_objects", {
+  queries: [
     {
-      objectId: "email@company.com",
       objectType: "native_contact",
+      where: {
+        propertyId: "email",
+        operator: "eq",
+        value: "john@company.com",
+      },
     },
   ],
+  propertiesToReturn: "*",
+  includeRelationships: true,
 });
 
-// Search for objects with time-based filters
+// Search for meetings with a specific attendee (relationship-based)
 const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 const meetings = await client.mcpCallTool("search_objects", {
   queries: [
     {
       objectType: "native_meetingrecording",
+      where: {
+        relationship: "attendee",
+        targetObjectType: "native_contact",
+        targetObjectId: "john@company.com",
+        operator: "eq",
+      },
     },
   ],
   timeframeStart: sevenDaysAgo.toISOString(),
   timeframeEnd: new Date().toISOString(),
-  limit: 10,
+  propertiesToReturn: ["notes", "description", "topic"],
+  includeRelationships: true,
 });
 
-// Get meeting recording context
+// Get meeting recording context (for transcripts)
 const meetingContext = await client.mcpCallTool(
   "get_meeting_recording_context",
   {
-    recordingId: "recording-id",
+    meetingRecordingId: "recording-uuid",
   }
 );
 ```
@@ -715,9 +747,8 @@ This document describes the input schema for each tool available in the Day AI A
 
 ### Search & Query Tools
 
-- [search_objects](#search_objects)
+- [search_objects](#search_objects) - Primary tool for finding objects with property and relationship filtering
 - [keyword_search](#keyword_search)
-- [get_context_for_objects](#get_context_for_objects)
 
 ### CRM Object Management
 
@@ -763,63 +794,329 @@ This document describes the input schema for each tool available in the Day AI A
 
 ## search_objects
 
-Search for CRM objects using complex queries with filters and conditions.
+Search for CRM objects using property filters, relationship queries, and complex conditions. This is the primary tool for finding and retrieving data from Day AI.
 
 ### Input Schema
 
 ```typescript
 {
+  description?: string; // Short (4-5 words) user-friendly description of the search
+
   queries: Array<{
-    objectType: string; // One of: Person, Organization, Opportunity, Action, MeetingRecording, Page, Thread, Draft, Pipeline, Stage
-    where?: {
-      AND?: Array<WhereCondition>;
-      OR?: Array<WhereCondition>;
-      NOT?: WhereCondition;
-      // Direct property conditions
-      [propertyName: string]: {
-        equals?: any;
-        not?: any;
-        in?: any[];
-        notIn?: any[];
-        lt?: any;
-        lte?: any;
-        gt?: any;
-        gte?: any;
-        contains?: string;
-        startsWith?: string;
-        endsWith?: string;
-        // Date-specific operators
-        dateEquals?: string;
-        dateLt?: string;
-        dateLte?: string;
-        dateGt?: string;
-        dateGte?: string;
-      };
-    };
-    orderBy?: Array<{
-      [propertyName: string]: "asc" | "desc";
-    }>;
-    skip?: number; // Offset for pagination
+    objectType: string; // See "Searchable Object Types" below
+    objectIds?: string[]; // Fetch specific objects by ID (mutually exclusive with 'where')
+    where?: WhereCondition; // Filter conditions (see below)
   }>;
+
+  // Pagination
+  offset?: number; // Number of results to skip (default: 0)
+
+  // Timeframe filtering
+  timeframeStart?: string; // ISO 8601 datetime or YYYY-MM-DD
+  timeframeEnd?: string; // ISO 8601 datetime or YYYY-MM-DD
+  timeframeField?: 'createdAt' | 'updatedAt' | 'storedAt'; // Default: 'updatedAt'
+
+  // Response control
+  propertiesToReturn?: string[] | '*'; // Property IDs to return, or '*' for all
+  includeRelationships?: boolean; // Include related objects (default: false)
 }
 ```
 
-### Example
+### Searchable Object Types
+
+| Type | Description | Common Use Cases |
+|------|-------------|------------------|
+| `Person` / `native_contact` | Contacts, people | Find people by email, name, company |
+| `Organization` / `native_organization` | Companies | Find companies by domain, industry |
+| `Opportunity` / `native_opportunity` | Deals, prospects | Pipeline management, deal tracking |
+| `Pipeline` / `native_pipeline` | Sales pipelines | Pipeline structure, stage definitions |
+| `Stage` / `native_stage` | Pipeline stages | Stage-based opportunity filtering |
+| `MeetingRecording` / `native_meetingrecording` | Past meetings | Meeting search by attendee, topic |
+| `Action` / `native_action` | Tasks, todos | Task management, follow-ups |
+| `Page` / `native_page` | Documents, notes | Content search |
+| `GmailThread` / `native_gmailthread` | Email threads | Email search by participant |
+| `GmailMessage` / `native_gmailmessage` | Individual emails | Specific message lookup |
+| `Event` / `native_calendarevent` | Calendar events | Future meeting lookup |
+| `Context` / `native_context` | Notes on objects | Find notes attached to records |
+| `Template` / `native_template` | Email templates | Template lookup |
+| `View` / `native_view` | Saved table views | View management |
+| `SlackChannel` / `native_slackchannel` | Slack channels | Channel search |
+| `SlackMessage` / `native_slackmessage` | Slack messages | Message search |
+| `Thread` / `native_thread` | Chat threads | Conversation lookup |
+| `Draft` / `native_draft` | Email drafts | Draft management |
+
+### Where Clause Structure
+
+The `where` field supports two types of conditions:
+
+#### 1. Property-Based Filtering
+
+Filter by object properties:
+
+```typescript
+{
+  propertyId: string;  // Property ID to filter on
+  operator: Operator;  // Comparison operator
+  value: string;       // Value to compare against
+}
+```
+
+**Valid Operators:**
+- `eq` - equals
+- `gt` - greater than
+- `gte` - greater than or equal (use for "on or after" dates)
+- `lt` - less than
+- `lte` - less than or equal (use for "on or before" dates)
+- `contains` - string contains
+- `startsWith` - string starts with
+- `endsWith` - string ends with
+- `is` - null check
+
+#### 2. Relationship-Based Filtering
+
+Filter by related objects:
+
+```typescript
+{
+  relationship: string;       // Relationship name (e.g., "attendee", "related")
+  targetObjectType: string;   // Type of related object
+  targetObjectId: string;     // ID of the target object
+  operator: Operator;
+}
+```
+
+**Key Relationships:**
+| Source Object | Relationship | Target Object | Description |
+|--------------|--------------|---------------|-------------|
+| MeetingRecording | `attendee` | Contact | People who attended |
+| MeetingRecording | `attendee` | Organization | Companies represented |
+| Opportunity | `related` | Contact | Involved people |
+| Opportunity | `related` | Organization | Related companies |
+| Opportunity | `stage` | Stage | Current pipeline stage |
+| Opportunity | `assignee` | User | Deal owner |
+| Stage | `pipeline` | Pipeline | Parent pipeline |
+| Context | `parent` | Contact/Organization/Opportunity | Object note is attached to |
+| GmailThread | `recipient` | Contact | People on thread |
+
+#### 3. Complex Conditions with AND/OR
+
+Combine multiple conditions:
+
+```typescript
+// AND condition
+{
+  AND: [
+    { propertyId: "ownerEmail", operator: "eq", value: "user@company.com" },
+    { propertyId: "status", operator: "eq", value: "ACTIVE" }
+  ]
+}
+
+// OR condition
+{
+  OR: [
+    { propertyId: "title", operator: "contains", value: "urgent" },
+    { propertyId: "title", operator: "contains", value: "critical" }
+  ]
+}
+
+// Mixed property + relationship
+{
+  AND: [
+    { relationship: "attendee", targetObjectType: "native_contact", targetObjectId: "john@acme.com", operator: "eq" },
+    { propertyId: "title", operator: "contains", value: "demo" }
+  ]
+}
+```
+
+### Response Format
+
+```typescript
+{
+  offset: number;
+  hasMore?: boolean;
+  nextOffset?: number;
+
+  // Results keyed by object type
+  native_contact?: {
+    totalCount: number;
+    results: Array<{
+      objectId: string;
+      title: string;
+      description?: string;
+      createdAt: string;
+      updatedAt: string;
+      properties?: Record<string, any>;  // If propertiesToReturn specified
+      relationships?: Array<{            // If includeRelationships: true
+        objectType: string;
+        objectId: string;
+        title: string;
+        description?: string;
+        relationship: string;
+      }>;
+    }>;
+  };
+  // ... other object types
+}
+```
+
+### Examples
+
+#### Property-Based Search
 
 ```json
 {
   "queries": [
     {
-      "objectType": "Person",
+      "objectType": "native_contact",
       "where": {
-        "AND": [
-          { "email": { "contains": "@acme.com" } },
-          { "jobTitle": { "contains": "Engineer" } }
-        ]
-      },
-      "orderBy": [{ "lastName": "asc" }]
+        "propertyId": "email",
+        "operator": "contains",
+        "value": "@acme.com"
+      }
     }
   ]
+}
+```
+
+#### Find Meetings by Attendee (Relationship Search)
+
+```json
+{
+  "queries": [
+    {
+      "objectType": "native_meetingrecording",
+      "where": {
+        "relationship": "attendee",
+        "targetObjectType": "native_contact",
+        "targetObjectId": "john@acme.com",
+        "operator": "eq"
+      }
+    }
+  ],
+  "timeframeStart": "2024-01-01",
+  "includeRelationships": true
+}
+```
+
+#### Find Meetings with a Company
+
+```json
+{
+  "queries": [
+    {
+      "objectType": "native_meetingrecording",
+      "where": {
+        "relationship": "attendee",
+        "targetObjectType": "native_organization",
+        "targetObjectId": "acme.com",
+        "operator": "eq"
+      }
+    }
+  ],
+  "includeRelationships": true
+}
+```
+
+#### Find Opportunities Related to a Contact
+
+```json
+{
+  "queries": [
+    {
+      "objectType": "native_opportunity",
+      "where": {
+        "relationship": "related",
+        "targetObjectType": "native_contact",
+        "targetObjectId": "john@acme.com",
+        "operator": "eq"
+      }
+    }
+  ],
+  "includeRelationships": true
+}
+```
+
+#### Combined Property + Relationship Filter
+
+```json
+{
+  "queries": [
+    {
+      "objectType": "native_meetingrecording",
+      "where": {
+        "AND": [
+          {
+            "relationship": "attendee",
+            "targetObjectType": "native_contact",
+            "targetObjectId": "john@acme.com",
+            "operator": "eq"
+          },
+          {
+            "propertyId": "title",
+            "operator": "contains",
+            "value": "demo"
+          }
+        ]
+      }
+    }
+  ],
+  "timeframeStart": "2024-01-01",
+  "propertiesToReturn": ["notes", "description", "topic"],
+  "includeRelationships": true
+}
+```
+
+#### Find Notes on an Organization
+
+```json
+{
+  "queries": [
+    {
+      "objectType": "native_context",
+      "where": {
+        "relationship": "parent",
+        "targetObjectType": "native_organization",
+        "targetObjectId": "acme.com",
+        "operator": "eq"
+      }
+    }
+  ],
+  "includeRelationships": true
+}
+```
+
+#### Get All Properties for Specific Objects
+
+```json
+{
+  "queries": [
+    {
+      "objectType": "native_opportunity",
+      "objectIds": ["opp-uuid-1", "opp-uuid-2"]
+    }
+  ],
+  "propertiesToReturn": "*",
+  "includeRelationships": true
+}
+```
+
+#### Custom Property Search (Picklist)
+
+When searching custom properties with options (picklist/multipicklist), use the option UUID:
+
+```json
+{
+  "queries": [
+    {
+      "objectType": "native_opportunity",
+      "where": {
+        "propertyId": "clrh8zq9w0000ld08abcdefgh",
+        "operator": "eq",
+        "value": "clrh8zq9w0001ld08xyz12345"
+      }
+    }
+  ],
+  "propertiesToReturn": ["clrh8zq9w0000ld08abcdefgh"]
 }
 ```
 
@@ -860,30 +1157,6 @@ Perform keyword-based searches across CRM objects.
       "searchIntent": "find_specific"
     }
   ]
-}
-```
-
----
-
-## get_context_for_objects
-
-Retrieve detailed context for multiple CRM objects.
-
-### Input Schema
-
-```typescript
-{
-  objectIds: string[] // Array of object IDs to get context for
-  tokenOffset?: number // For pagination, default: 0
-}
-```
-
-### Example
-
-```json
-{
-  "objectIds": ["person_123", "org_456", "opp_789"],
-  "tokenOffset": 0
 }
 ```
 

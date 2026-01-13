@@ -12,7 +12,7 @@ async function main() {
     // Test the connection first
     console.log('1. Testing connection...');
     const connectionTest = await client.testConnection();
-    
+
     if (!connectionTest.success) {
       console.error('❌ Connection failed:', connectionTest.error);
       process.exit(1);
@@ -25,7 +25,7 @@ async function main() {
     // Initialize MCP connection
     console.log('2. Initializing MCP connection...');
     const mcpInit = await client.mcpInitialize();
-    
+
     if (!mcpInit.success) {
       console.error('❌ MCP initialization failed:', mcpInit.error);
       process.exit(1);
@@ -36,7 +36,7 @@ async function main() {
     // List available tools
     console.log('3. Listing available MCP tools...');
     const toolsList = await client.mcpListTools();
-    
+
     if (!toolsList.success) {
       console.error('❌ Failed to list tools:', toolsList.error);
       process.exit(1);
@@ -48,42 +48,125 @@ async function main() {
     });
     console.log();
 
-    // Call get_context_for_objects with the specified email
+    // Example 1: Search for a contact with full properties
     const emailAddress = "markitecht@gmail.com";
-    console.log(`4. Calling get_context_for_objects with email: ${emailAddress}...`);
-    
-    const contextResult = await client.mcpCallTool('get_context_for_objects', {
-      objects: [{ 
-        objectId: emailAddress, 
-        objectType: 'native_contact' 
-      }]
-    });
-    
-    if (!contextResult.success) {
-      console.error('❌ Tool call failed:', contextResult.error);
-      
-      // Check if it's a tool not found error
-      if (contextResult.error?.includes('get_context_for_objects')) {
-        console.log('💡 The get_context_for_objects tool might not be available for this assistant.');
-        console.log('   Available tools are listed above.');
+    console.log(`4. Searching for contact: ${emailAddress}...`);
+
+    const contactResult = await client.searchObjects(
+      [
+        {
+          objectType: 'native_contact',
+          where: {
+            propertyId: 'email',
+            operator: 'eq',
+            value: emailAddress,
+          },
+        },
+      ],
+      {
+        propertiesToReturn: '*',
+        includeRelationships: true,
       }
-      
-      process.exit(1);
+    );
+
+    if (!contactResult.success) {
+      console.error('❌ Contact search failed:', contactResult.error);
+    } else {
+      console.log('✅ Contact search successful!');
+      console.log('\n📋 Contact Result:');
+      if (contactResult.data?.isError) {
+        console.log('⚠️  Tool returned an error:');
+        console.log(contactResult.data?.content[0]?.text);
+      } else {
+        const resultText = contactResult.data?.content[0]?.text;
+        if (resultText) {
+          const parsed = JSON.parse(resultText);
+          console.log(`   Found ${parsed.native_contact?.results?.length || 0} contacts`);
+          if (parsed.native_contact?.results?.[0]) {
+            const contact = parsed.native_contact.results[0];
+            console.log(`   Name: ${contact.title || contact.properties?.firstName + ' ' + contact.properties?.lastName}`);
+            console.log(`   Relationships: ${contact.relationships?.length || 0}`);
+          }
+        }
+      }
+    }
+    console.log();
+
+    // Example 2: Find meetings with a specific attendee (relationship-based search)
+    console.log(`5. Finding meetings attended by ${emailAddress}...`);
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const meetingsResult = await client.findMeetingsByAttendee(emailAddress, {
+      timeframeStart: thirtyDaysAgo.toISOString(),
+      includeRelationships: true,
+    });
+
+    if (!meetingsResult.success) {
+      console.error('❌ Meetings search failed:', meetingsResult.error);
+    } else {
+      console.log('✅ Meetings search successful!');
+      console.log('\n📋 Meetings Result:');
+      if (meetingsResult.data?.isError) {
+        console.log('⚠️  Tool returned an error:');
+        console.log(meetingsResult.data?.content[0]?.text);
+      } else {
+        const resultText = meetingsResult.data?.content[0]?.text;
+        if (resultText) {
+          const parsed = JSON.parse(resultText);
+          const meetings = parsed.native_meetingrecording?.results || [];
+          console.log(`   Found ${meetings.length} meetings in the last 30 days`);
+          meetings.slice(0, 3).forEach((meeting: any, i: number) => {
+            console.log(`   ${i + 1}. ${meeting.title} (${meeting.updatedAt})`);
+            if (meeting.relationships?.length > 0) {
+              const attendees = meeting.relationships.filter((r: any) => r.relationship === 'attendee' || r.relationship === 'attended meeting');
+              console.log(`      Attendees: ${attendees.map((a: any) => a.title || a.objectId).join(', ')}`);
+            }
+          });
+          if (meetings.length > 3) {
+            console.log(`   ... and ${meetings.length - 3} more`);
+          }
+        }
+      }
+    }
+    console.log();
+
+    // Example 3: Search for opportunities with a company (relationship-based)
+    console.log('6. Searching for opportunities...');
+
+    const oppsResult = await client.searchObjects(
+      [
+        {
+          objectType: 'native_opportunity',
+        },
+      ],
+      {
+        propertiesToReturn: ['title', 'expectedRevenue', 'ownerEmail'],
+        includeRelationships: true,
+      }
+    );
+
+    if (!oppsResult.success) {
+      console.error('❌ Opportunities search failed:', oppsResult.error);
+    } else {
+      console.log('✅ Opportunities search successful!');
+      const resultText = oppsResult.data?.content[0]?.text;
+      if (resultText) {
+        const parsed = JSON.parse(resultText);
+        const opps = parsed.native_opportunity?.results || [];
+        console.log(`   Found ${opps.length} opportunities`);
+        opps.slice(0, 3).forEach((opp: any, i: number) => {
+          console.log(`   ${i + 1}. ${opp.title}`);
+          if (opp.properties?.expectedRevenue) {
+            console.log(`      Expected Revenue: $${opp.properties.expectedRevenue}`);
+          }
+          if (opp.properties?.ownerEmail) {
+            console.log(`      Owner: ${opp.properties.ownerEmail}`);
+          }
+        });
+      }
     }
 
-    console.log('✅ Tool call successful!');
-    console.log('\n📋 Result:');
-    
-    if (contextResult.data?.isError) {
-      console.log('⚠️  Tool returned an error:');
-      console.log(contextResult.data?.content[0]?.text);
-    } else {
-      console.log('📄 Context data:');
-      contextResult.data?.content.forEach((content, index) => {
-        console.log(`   Content ${index + 1} (${content.type}):`);
-        console.log(`   ${content.text}\n`);
-      });
-    }
+    console.log('\n✨ Example completed successfully!');
 
   } catch (error) {
     console.error('❌ Example failed:', error instanceof Error ? error.message : error);
