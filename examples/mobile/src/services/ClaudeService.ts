@@ -155,75 +155,119 @@ export class ClaudeService {
       requestBody.tools = tools;
     }
 
-    console.log('[ClaudeService] Streaming via proxy:', proxyUrl);
-    console.log('[ClaudeService] Has API key:', !!apiKey);
+    console.log('[ClaudeService] Streaming via proxy with XMLHttpRequest:', proxyUrl);
 
-    const response = await fetch(`${proxyUrl}/api/anthropic/stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey || '',
-      },
-      body: JSON.stringify(requestBody),
-    });
+    // Use XMLHttpRequest for true streaming support in React Native
+    yield* this.streamViaXHR(proxyUrl, requestBody, apiKey);
+  }
 
-    console.log('[ClaudeService] Proxy response status:', response.status);
-    console.log('[ClaudeService] Proxy response ok:', response.ok);
-    console.log('[ClaudeService] Has response.body:', !!response.body);
-    console.log('[ClaudeService] Response type:', typeof response.body);
+  private async *streamViaXHR(
+    proxyUrl: string,
+    requestBody: any,
+    apiKey?: string
+  ): AsyncGenerator<StreamChunk> {
+    const chunks: StreamChunk[] = [];
+    let isComplete = false;
+    let hasError: Error | null = null;
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('[ClaudeService] Proxy error response:', error);
-      throw new Error(`API request failed: ${error}`);
-    }
+    const xhr = new XMLHttpRequest();
+    let processedLength = 0;
+    let buffer = '';
 
-    // React Native doesn't support response.body.getReader()
-    // Read the full text response instead
-    const fullText = await response.text();
-    console.log('[ClaudeService] Received full response, length:', fullText.length);
+    xhr.open('POST', `${proxyUrl}/api/anthropic/stream`, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('x-api-key', apiKey || '');
 
-    const lines = fullText.split('\n');
+    xhr.onprogress = () => {
+      const responseText = xhr.responseText;
+      const newData = responseText.substring(processedLength);
+      processedLength = responseText.length;
 
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') {
-          yield { type: 'done' };
-          return;
-        }
+      buffer += newData;
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
 
-        try {
-          const parsed = JSON.parse(data);
-
-          if (parsed.type === 'content_block_delta') {
-            if (parsed.delta?.type === 'text_delta') {
-              yield {
-                type: 'text',
-                text: parsed.delta.text,
-              };
-            }
-          } else if (parsed.type === 'content_block_start') {
-            if (parsed.content_block?.type === 'tool_use') {
-              yield {
-                type: 'tool_use',
-                toolCall: {
-                  id: parsed.content_block.id,
-                  name: parsed.content_block.name,
-                  input: parsed.content_block.input,
-                },
-              };
-            }
-          } else if (parsed.type === 'message_stop') {
-            yield { type: 'done' };
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') {
+            isComplete = true;
+            return;
           }
-        } catch {
-          // Skip invalid JSON
+
+          try {
+            const parsed = JSON.parse(data);
+
+            if (parsed.type === 'content_block_delta') {
+              if (parsed.delta?.type === 'text_delta') {
+                chunks.push({
+                  type: 'text',
+                  text: parsed.delta.text,
+                });
+              }
+            } else if (parsed.type === 'content_block_start') {
+              if (parsed.content_block?.type === 'tool_use') {
+                chunks.push({
+                  type: 'tool_use',
+                  toolCall: {
+                    id: parsed.content_block.id,
+                    name: parsed.content_block.name,
+                    input: parsed.content_block.input,
+                  },
+                });
+              }
+            } else if (parsed.type === 'message_stop') {
+              isComplete = true;
+            }
+          } catch (e) {
+            console.warn('[ClaudeService] Failed to parse SSE data:', e);
+          }
         }
       }
-    }
+    };
 
-    yield { type: 'done' };
+    xhr.onload = () => {
+      if (xhr.status !== 200) {
+        console.error('[ClaudeService] XHR error:', xhr.status, xhr.statusText);
+        hasError = new Error(`API request failed: ${xhr.status} ${xhr.statusText}`);
+      } else {
+        console.log('[ClaudeService] Stream completed successfully');
+      }
+      isComplete = true;
+    };
+
+    xhr.onerror = () => {
+      console.error('[ClaudeService] XHR network error');
+      hasError = new Error('Network request failed');
+      isComplete = true;
+    };
+
+    // Send the request
+    xhr.send(JSON.stringify(requestBody));
+
+    // Yield chunks as they become available
+    while (true) {
+      // Wait for chunks or completion
+      while (chunks.length === 0 && !isComplete) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+
+      // Yield all available chunks
+      while (chunks.length > 0) {
+        yield chunks.shift()!;
+      }
+
+      // Check for errors
+      if (hasError) {
+        throw hasError;
+      }
+
+      // Exit when complete and no more chunks
+      if (isComplete && chunks.length === 0) {
+        yield { type: 'done' };
+        break;
+      }
+    }
   }
 
   private getSystemPrompt(hasTools: boolean = false): string {
