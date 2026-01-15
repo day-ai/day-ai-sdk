@@ -53,6 +53,11 @@ export function SettingsSheet({
   const [dayAIConnecting, setDayAIConnecting] = useState(false);
   const [dayAIError, setDayAIError] = useState<string | null>(null);
 
+  // Update local state when currentApiKey prop changes
+  React.useEffect(() => {
+    setApiKey(currentApiKey);
+  }, [currentApiKey]);
+
   const handleSave = () => {
     if (apiKey.trim()) {
       onSaveSettings(apiKey.trim(), selectedModel);

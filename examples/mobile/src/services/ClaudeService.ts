@@ -25,12 +25,18 @@ export class ClaudeService {
   }
 
   initialize(apiKey: string): void {
+    console.log('[ClaudeService] Initialize called on platform:', Platform.OS);
+    console.log('[ClaudeService] API key provided:', apiKey ? `${apiKey.substring(0, 10)}...` : 'none');
+
     // Only initialize on native platforms
     // Web will use proxy
     if (Platform.OS !== 'web') {
       this.client = new Anthropic({
         apiKey,
       });
+      console.log('[ClaudeService] Anthropic client created for native platform');
+    } else {
+      console.log('[ClaudeService] Skipping client init on web (will use proxy)');
     }
   }
 
@@ -57,13 +63,9 @@ export class ClaudeService {
     });
 
     try {
-      if (Platform.OS === 'web') {
-        // Use proxy on web to avoid CORS
-        yield* this.streamViaProxy(messages, apiKey, tools);
-      } else {
-        // Use SDK on native
-        yield* this.streamViaSdk(messages, tools);
-      }
+      // Always use proxy for now - SDK has issues in React Native
+      // In production, you could use direct SDK on native with proper polyfills
+      yield* this.streamViaProxy(messages, apiKey, tools);
     } catch (error) {
       console.error('[ClaudeService] Stream error:', error);
       yield {
@@ -81,6 +83,9 @@ export class ClaudeService {
       throw new Error('Claude client not initialized');
     }
 
+    console.log('[ClaudeService] Starting SDK stream with model:', this.model);
+    console.log('[ClaudeService] Client initialized:', !!this.client);
+
     const requestParams: any = {
       model: this.model,
       max_tokens: 4096,
@@ -93,30 +98,40 @@ export class ClaudeService {
       requestParams.tools = tools;
     }
 
-    const stream = await this.client.messages.stream(requestParams);
+    try {
+      const stream = await this.client.messages.stream(requestParams);
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta') {
-        if (event.delta.type === 'text_delta') {
-          yield {
-            type: 'text',
-            text: event.delta.text,
-          };
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta') {
+          if (event.delta.type === 'text_delta') {
+            yield {
+              type: 'text',
+              text: event.delta.text,
+            };
+          }
+        } else if (event.type === 'content_block_start') {
+          if (event.content_block.type === 'tool_use') {
+            yield {
+              type: 'tool_use',
+              toolCall: {
+                id: event.content_block.id,
+                name: event.content_block.name,
+                input: event.content_block.input,
+              },
+            };
+          }
+        } else if (event.type === 'message_stop') {
+          yield { type: 'done' };
         }
-      } else if (event.type === 'content_block_start') {
-        if (event.content_block.type === 'tool_use') {
-          yield {
-            type: 'tool_use',
-            toolCall: {
-              id: event.content_block.id,
-              name: event.content_block.name,
-              input: event.content_block.input,
-            },
-          };
-        }
-      } else if (event.type === 'message_stop') {
-        yield { type: 'done' };
       }
+    } catch (error: any) {
+      console.error('[ClaudeService] SDK stream error details:', {
+        message: error.message,
+        status: error.status,
+        type: error.type,
+        error: error.error,
+      });
+      throw error;
     }
   }
 
@@ -140,6 +155,9 @@ export class ClaudeService {
       requestBody.tools = tools;
     }
 
+    console.log('[ClaudeService] Streaming via proxy:', proxyUrl);
+    console.log('[ClaudeService] Has API key:', !!apiKey);
+
     const response = await fetch(`${proxyUrl}/api/anthropic/stream`, {
       method: 'POST',
       headers: {
@@ -149,60 +167,58 @@ export class ClaudeService {
       body: JSON.stringify(requestBody),
     });
 
+    console.log('[ClaudeService] Proxy response status:', response.status);
+    console.log('[ClaudeService] Proxy response ok:', response.ok);
+    console.log('[ClaudeService] Has response.body:', !!response.body);
+    console.log('[ClaudeService] Response type:', typeof response.body);
+
     if (!response.ok) {
       const error = await response.text();
+      console.error('[ClaudeService] Proxy error response:', error);
       throw new Error(`API request failed: ${error}`);
     }
 
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
+    // React Native doesn't support response.body.getReader()
+    // Read the full text response instead
+    const fullText = await response.text();
+    console.log('[ClaudeService] Received full response, length:', fullText.length);
 
-    const decoder = new TextDecoder();
-    let buffer = '';
+    const lines = fullText.split('\n');
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+        if (data === '[DONE]') {
+          yield { type: 'done' };
+          return;
+        }
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+        try {
+          const parsed = JSON.parse(data);
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
-          if (data === '[DONE]') {
-            yield { type: 'done' };
-            return;
-          }
-
-          try {
-            const parsed = JSON.parse(data);
-
-            if (parsed.type === 'content_block_delta') {
-              if (parsed.delta?.type === 'text_delta') {
-                yield {
-                  type: 'text',
-                  text: parsed.delta.text,
-                };
-              }
-            } else if (parsed.type === 'content_block_start') {
-              if (parsed.content_block?.type === 'tool_use') {
-                yield {
-                  type: 'tool_use',
-                  toolCall: {
-                    id: parsed.content_block.id,
-                    name: parsed.content_block.name,
-                    input: parsed.content_block.input,
-                  },
-                };
-              }
-            } else if (parsed.type === 'message_stop') {
-              yield { type: 'done' };
+          if (parsed.type === 'content_block_delta') {
+            if (parsed.delta?.type === 'text_delta') {
+              yield {
+                type: 'text',
+                text: parsed.delta.text,
+              };
             }
-          } catch {
-            // Skip invalid JSON
+          } else if (parsed.type === 'content_block_start') {
+            if (parsed.content_block?.type === 'tool_use') {
+              yield {
+                type: 'tool_use',
+                toolCall: {
+                  id: parsed.content_block.id,
+                  name: parsed.content_block.name,
+                  input: parsed.content_block.input,
+                },
+              };
+            }
+          } else if (parsed.type === 'message_stop') {
+            yield { type: 'done' };
           }
+        } catch {
+          // Skip invalid JSON
         }
       }
     }
