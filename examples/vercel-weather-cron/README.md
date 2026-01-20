@@ -1,6 +1,6 @@
 # Vercel Weather Cron Demo
 
-> **Best Way to Get Support**: Run `claude code` from the root of this repo to ask questions and get help customizing this app.
+> **Best Way to Get Support**: Run `claude` from the root of this repo to ask questions and get help customizing this app.
 
 A simple Next.js app that demonstrates **Vercel Cron Jobs** + **Day AI MCP integration**. Every day at 9 AM, this app fetches the weather and emails you via Day AI's `send_notification` tool.
 
@@ -295,14 +295,14 @@ Get a free API key from [openweathermap.org](https://openweathermap.org/api) and
 
 ## Questions & Support
 
-### Using Claude Code (Recommended)
+### Using Claude (Recommended)
 
 The **best way to get help** customizing this app:
 
 ```bash
 # From the root of the repo
 cd ../../  # if you're in examples/vercel-weather-cron
-claude code
+claude
 ```
 
 Ask Claude anything:

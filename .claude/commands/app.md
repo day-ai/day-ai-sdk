@@ -204,7 +204,7 @@ The AI bridges both worlds, understanding local app data AND full CRM context.
 2. **Test iteratively**: Run the app often, see what works
 3. **Focus on tools**: Good tool design = good AI behavior
 4. **Use SCHEMA.md**: Reference for all Day AI MCP tools
-5. **Ask Claude Code**: Run `claude code` for help debugging
+5. **Ask Claude**: Run `claude` for help debugging
 6. **Commit often**: Save progress as you build
 
 ## Next Steps

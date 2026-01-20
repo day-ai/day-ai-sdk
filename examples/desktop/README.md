@@ -1,6 +1,6 @@
 # Day AI Desktop Demo
 
-> **Best Way to Get Support**: Run `claude code` from the root of this repo to ask questions and get help customizing this app.
+> **Best Way to Get Support**: Run `claude` from the root of this repo to ask questions and get help customizing this app.
 
 A fully-featured Electron app demonstrating how to build an AI-powered desktop application that integrates with Day AI via MCP (Model Context Protocol).
 
@@ -265,14 +265,14 @@ Add your Anthropic API key to `.env` or enter it in Settings.
 
 ## Questions & Support
 
-### Using Claude Code (Recommended)
+### Using Claude (Recommended)
 
 The **best way to get help** customizing this app:
 
 ```bash
 # From the root of the repo
 cd ../../  # if you're in examples/desktop
-claude code
+claude
 ```
 
 Ask Claude anything:

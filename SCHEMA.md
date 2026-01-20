@@ -617,3 +617,794 @@ Many relationships are bidirectional. Here are common inverse lookups:
 | Organization → Person | `member` | Person → Organization via `organization` |
 | Stage → Pipeline | `pipeline` | Pipeline → Stage via `stage` |
 | Opportunity → Stage | `stage` | Stage → Opportunity via `opportunity` |
+
+---
+
+# MCP Tool Input Schemas
+
+This section documents the input schema for each MCP tool available through Day AI.
+
+## Table of Contents
+
+### Search & Query Tools
+- [search_objects](#search_objects) - Primary tool for finding objects with property and relationship filtering
+- [keyword_search](#keyword_search)
+
+### CRM Object Management
+- [create_or_update_person_organization](#create_or_update_person_organization)
+- [create_or_update_opportunity](#create_or_update_opportunity)
+- [create_or_update_pipeline_stage](#create_or_update_pipeline_stage)
+- [update_object](#update_object)
+- [analyze_before_create_or_update](#analyze_before_create_or_update)
+
+### Content Creation & Management
+- [create_page](#create_page)
+- [update_page](#update_page)
+- [create_email_draft](#create_email_draft)
+- [send_email](#send_email)
+- [create_or_update_workspace_context](#create_or_update_workspace_context)
+
+### Actions & Tasks
+- [create_or_update_action](#create_or_update_action)
+
+### Views & Visualization
+- [create_view](#create_view)
+- [create_chart](#create_chart)
+
+### Meeting & Recording Tools
+- [get_meeting_recording_context](#get_meeting_recording_context)
+- [create_meeting_recording_clip](#create_meeting_recording_clip)
+
+### Notifications & Communication
+- [send_notification](#send_notification)
+
+### Utility Tools
+- [web_search](#web_search)
+- [get_share_url](#get_share_url)
+- [create_custom_property](#create_custom_property)
+
+---
+
+## search_objects
+
+Search for CRM objects using property filters, relationship queries, and complex conditions. This is the primary tool for finding and retrieving data from Day AI.
+
+### Input Schema
+
+```typescript
+{
+  description?: string; // Short (4-5 words) user-friendly description of the search
+
+  queries: Array<{
+    objectType: string; // See "Searchable Object Types" below
+    objectIds?: string[]; // Fetch specific objects by ID (mutually exclusive with 'where')
+    where?: WhereCondition; // Filter conditions (see below)
+  }>;
+
+  // Pagination
+  offset?: number; // Number of results to skip (default: 0)
+
+  // Timeframe filtering
+  timeframeStart?: string; // ISO 8601 datetime or YYYY-MM-DD
+  timeframeEnd?: string; // ISO 8601 datetime or YYYY-MM-DD
+  timeframeField?: 'createdAt' | 'updatedAt' | 'storedAt'; // Default: 'updatedAt'
+
+  // Response control
+  propertiesToReturn?: string[] | '*'; // Property IDs to return, or '*' for all
+  includeRelationships?: boolean; // Include related objects (default: false)
+}
+```
+
+### Searchable Object Types
+
+| Type | Description | Common Use Cases |
+|------|-------------|------------------|
+| `Person` / `native_contact` | Contacts, people | Find people by email, name, company |
+| `Organization` / `native_organization` | Companies | Find companies by domain, industry |
+| `Opportunity` / `native_opportunity` | Deals, prospects | Pipeline management, deal tracking |
+| `Pipeline` / `native_pipeline` | Sales pipelines | Pipeline structure, stage definitions |
+| `Stage` / `native_stage` | Pipeline stages | Stage-based opportunity filtering |
+| `MeetingRecording` / `native_meetingrecording` | Past meetings | Meeting search by attendee, topic |
+| `Action` / `native_action` | Tasks, todos | Task management, follow-ups |
+| `Page` / `native_page` | Documents, notes | Content search |
+| `GmailThread` / `native_gmailthread` | Email threads | Email search by participant |
+| `GmailMessage` / `native_gmailmessage` | Individual emails | Specific message lookup |
+| `Event` / `native_calendarevent` | Calendar events | Future meeting lookup |
+| `Context` / `native_context` | Notes on objects | Find notes attached to records |
+| `Template` / `native_template` | Email templates | Template lookup |
+| `View` / `native_view` | Saved table views | View management |
+| `SlackChannel` / `native_slackchannel` | Slack channels | Channel search |
+| `SlackMessage` / `native_slackmessage` | Slack messages | Message search |
+| `Thread` / `native_thread` | Chat threads | Conversation lookup |
+| `Draft` / `native_draft` | Email drafts | Draft management |
+
+### Where Clause Structure
+
+The `where` field supports two types of conditions:
+
+#### 1. Property-Based Filtering
+
+```typescript
+{
+  propertyId: string;  // Property ID to filter on
+  operator: Operator;  // Comparison operator
+  value?: string;      // Value to compare against (optional for isNull/isNotNull)
+}
+```
+
+**Valid Operators:**
+- `eq` - equals
+- `gt` - greater than
+- `gte` - greater than or equal
+- `lt` - less than
+- `lte` - less than or equal
+- `contains` - string contains
+- `startsWith` - string starts with
+- `endsWith` - string ends with
+- `is` - null check
+- `isNull` - field is null/missing (no value required)
+- `isNotNull` - field has a value (no value required)
+
+#### 2. Relationship-Based Filtering
+
+```typescript
+{
+  relationship: string;       // Relationship name (e.g., "attendee", "related")
+  targetObjectType: string;   // Type of related object
+  targetObjectId: string;     // ID of the target object
+  operator: Operator;
+}
+```
+
+#### 3. Complex Conditions with AND/OR
+
+```typescript
+// AND condition
+{
+  AND: [
+    { propertyId: "ownerEmail", operator: "eq", value: "user@company.com" },
+    { propertyId: "status", operator: "eq", value: "ACTIVE" }
+  ]
+}
+
+// OR condition
+{
+  OR: [
+    { propertyId: "title", operator: "contains", value: "urgent" },
+    { propertyId: "title", operator: "contains", value: "critical" }
+  ]
+}
+```
+
+### Response Format
+
+```typescript
+{
+  offset: number;
+  hasMore?: boolean;
+  nextOffset?: number;
+
+  // Results keyed by object type
+  native_contact?: {
+    totalCount: number;
+    results: Array<{
+      objectId: string;
+      title: string;
+      description?: string;
+      createdAt: string;
+      updatedAt: string;
+      properties?: Record<string, any>;
+      relationships?: Array<{
+        objectType: string;
+        objectId: string;
+        title: string;
+        description?: string;
+        relationship: string;
+      }>;
+    }>;
+  };
+}
+```
+
+### Examples
+
+#### Property-Based Search
+```json
+{
+  "queries": [{
+    "objectType": "native_contact",
+    "where": {
+      "propertyId": "email",
+      "operator": "contains",
+      "value": "@acme.com"
+    }
+  }]
+}
+```
+
+#### Relationship Search (Meetings by Attendee)
+```json
+{
+  "queries": [{
+    "objectType": "native_meetingrecording",
+    "where": {
+      "relationship": "attendee",
+      "targetObjectType": "native_contact",
+      "targetObjectId": "john@acme.com",
+      "operator": "eq"
+    }
+  }],
+  "timeframeStart": "2024-01-01",
+  "includeRelationships": true
+}
+```
+
+#### Combined Property + Relationship Filter
+```json
+{
+  "queries": [{
+    "objectType": "native_meetingrecording",
+    "where": {
+      "AND": [
+        {
+          "relationship": "attendee",
+          "targetObjectType": "native_contact",
+          "targetObjectId": "john@acme.com",
+          "operator": "eq"
+        },
+        {
+          "propertyId": "title",
+          "operator": "contains",
+          "value": "demo"
+        }
+      ]
+    }
+  }],
+  "propertiesToReturn": ["notes", "description", "topic"],
+  "includeRelationships": true
+}
+```
+
+---
+
+## keyword_search
+
+Perform keyword-based searches across CRM objects.
+
+### Input Schema
+
+```typescript
+{
+  searchOperations: Array<{
+    objectType: "native_contact" | "native_organization" | "native_opportunity" |
+                "native_pipeline" | "native_meetingrecording" | "native_page";
+    keywords: string[]; // Keywords that should ALL be found. Use ["EMPTY"] to search all
+    limit?: number; // 1-50, default: 10
+    searchIntent?: "find_specific" | "explore_many"; // default: 'find_specific'
+  }>;
+}
+```
+
+---
+
+## create_or_update_person_organization
+
+Create or update Person and Organization objects in the CRM.
+
+### Input Schema
+
+```typescript
+{
+  isCreating?: boolean;
+  objectId?: string; // Required for updates
+  objectType: 'Person' | 'Organization';
+  standardProperties?: {
+    // Person properties
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumbers?: string[];
+    jobTitle?: string;
+    linkedInUrl?: string;
+
+    // Organization properties
+    domain?: string;
+    name?: string;
+    url?: string;
+    industry?: string;
+    employeeCount?: number;
+    revenue?: number;
+  };
+  customProperties?: Array<{
+    propertyId: string;
+    value: any;
+  }>;
+}
+```
+
+---
+
+## create_or_update_opportunity
+
+Create or update Opportunity objects.
+
+### Input Schema
+
+```typescript
+{
+  isCreating?: boolean;
+  objectId?: string; // Required for updates
+  standardProperties?: {
+    title: string; // Required for creation
+    stageId: string; // Required for creation
+    domain: string; // Required for creation (business domain)
+    ownerEmail?: string; // Must be workspace member
+    expectedRevenue?: number;
+    expectedCloseDate?: string; // ISO date
+    primaryPerson?: string;
+    roles?: Array<{
+      personEmail: string;
+      roles: string[];
+      reasoning?: string;
+    }>;
+  };
+  customProperties?: Array<{
+    propertyId: string;
+    value: any;
+  }>;
+}
+```
+
+---
+
+## create_or_update_pipeline_stage
+
+Create or update Pipeline and Stage objects.
+
+### Input Schema
+
+```typescript
+{
+  objectType: 'Pipeline' | 'Stage';
+  objectId?: string; // For updates
+  propertyUpdates: Array<{
+    propertyId: string;
+    value: any;
+    reasoning?: string;
+    source?: string;
+  }>;
+}
+```
+
+When creating a pipeline, include a `stages` property:
+
+```typescript
+{
+  propertyId: "stages",
+  value: Array<{
+    title: string;
+    type: 'AWARENESS' | 'CONNECTION' | 'NEEDS_IDENTIFICATION' | 'EVALUATION' |
+          'CONSIDERATION_NEGOTIATION' | 'CLOSED_WON' | 'CLOSED_LOST';
+    description?: string;
+    entranceCriteria: string[]; // 2-4 observable criteria
+  }>
+}
+```
+
+---
+
+## update_object
+
+Update properties or add notes to existing CRM objects.
+
+### Input Schema
+
+```typescript
+{
+  objectId: string; // Required
+  objectType: NativeObjectType;
+  updateDescription: string; // Description of the requested update
+}
+```
+
+---
+
+## analyze_before_create_or_update
+
+Analyze available properties before creating or updating CRM objects.
+
+### Input Schema
+
+```typescript
+{
+  objectType: NativeObjectType;
+  objectId?: string; // For updates
+  contextString: string; // Information about the object
+}
+```
+
+---
+
+## create_page
+
+Create a new page with formatted content.
+
+### Input Schema
+
+```typescript
+{
+  title: string;
+  pageHtmlContent: string; // HTML content (see formatting rules below)
+  publishedForUserAt?: string; // ISO datetime for sharing, null for private
+  isTemplate?: boolean;
+}
+```
+
+**HTML Formatting Rules:**
+- Use semantic HTML (h2, h3, p, ul, ol), never h1
+- No inline styles or class attributes
+- Reference CRM objects with `<span data-object-id="id" data-object-type="type">Name</span>`
+
+---
+
+## update_page
+
+Update an existing page's content or sharing status.
+
+### Input Schema
+
+```typescript
+{
+  pageId: string; // Required
+  title?: string;
+  pageHtmlContent?: string;
+  publishedForUserAt?: string | null; // null to make private
+}
+```
+
+---
+
+## create_email_draft
+
+Create an email draft for later sending.
+
+### Input Schema
+
+```typescript
+{
+  to: string[]; // Required
+  cc?: string[];
+  bcc?: string[];
+  subject: string; // Required
+  htmlBody: string; // Required
+  inReplyTo?: string; // Thread ID for replies
+}
+```
+
+---
+
+## send_email
+
+Send a previously created email draft.
+
+### Input Schema
+
+```typescript
+{
+  draftId: string; // ID from create_email_draft
+}
+```
+
+---
+
+## create_or_update_workspace_context
+
+Create or update context notes for CRM objects or properties.
+
+### Input Schema
+
+```typescript
+{
+  mode: 'create' | 'update';
+  contextId?: string; // Required for update mode
+  plainTextValue: string; // Markdown format content
+  title?: string; // Create only
+  summary?: string; // Create only
+  attachmentType?: 'object' | 'property'; // Required for create
+  objectType?: NativeObjectType; // Required for create
+  objectId?: string; // Required for create
+  propertyId?: string; // Required if attachmentType is 'property'
+}
+```
+
+---
+
+## create_or_update_action
+
+Create or update action items (tasks).
+
+### Input Schema
+
+```typescript
+{
+  actionId?: string; // For updates
+  title?: string; // Required for creates, format: "[Person] needs [action]"
+  assignedToAssistant: boolean; // Required for creates
+  executeAt?: string; // ISO datetime
+  ownerEmail?: string; // Required when assignedToAssistant is false
+  description?: string;
+  descriptionPoints?: string[]; // Preferred over description
+  dueDate?: string; // ISO datetime
+  type?: 'FOLLOW_UP' | 'SUPPORT';
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+  status?: 'UNREAD' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED';
+  people?: string[]; // Email addresses
+  domains?: string[]; // Organization domains
+  opportunityIds?: string[];
+}
+```
+
+---
+
+## create_view
+
+Create custom views for CRM data with filters and sorting.
+
+### Input Schema
+
+```typescript
+{
+  objectType: 'Person' | 'Organization' | 'Opportunity';
+  title: string;
+  description: string;
+  columns?: Array<{
+    field: string;
+    headerName?: string;
+    width?: number;
+    visible?: boolean;
+  }>;
+  filters?: Array<{
+    field: string;
+    operator: 'contains' | 'equals' | 'startsWith' | 'endsWith' | 'isEmpty' |
+              'isNotEmpty' | '>' | '<' | '>=' | '<=' | '!=' | 'is' | 'not' |
+              'after' | 'before' | 'onOrAfter' | 'onOrBefore';
+    value?: any;
+  }>;
+  sorting?: Array<{
+    field: string;
+    sort: 'asc' | 'desc';
+  }>;
+  groupBy?: string[];
+}
+```
+
+---
+
+## create_chart
+
+Create data visualization charts.
+
+### Input Schema
+
+```typescript
+{
+  chartType: 'bar' | 'line' | 'pie' | 'scatter' | 'area';
+  title: string;
+  description?: string;
+  data: {
+    series: Array<{
+      data: number[];
+      label: string;
+      id?: string;
+      stack?: string;
+      color?: string;
+    }>;
+    xAxis?: {
+      data?: string[];
+      label?: string;
+      scaleType?: 'band' | 'linear' | 'log' | 'point' | 'pow' | 'sqrt' | 'time';
+      min?: number;
+      max?: number;
+    };
+    yAxis?: {
+      label?: string;
+      scaleType?: 'band' | 'linear' | 'log' | 'point' | 'pow' | 'sqrt' | 'time';
+      min?: number;
+      max?: number;
+    };
+  };
+  config?: {
+    width?: number;
+    height?: number;
+    colors?: string[];
+    colorScheme?: 'default' | 'monochrome' | 'complementary' | 'analogous' |
+                  'triadic' | 'warm' | 'cool' | 'pastel' | 'vibrant';
+    showLegend?: boolean;
+    stacked?: boolean;
+    showGrid?: boolean;
+    margin?: { top?: number; right?: number; bottom?: number; left?: number; };
+  };
+}
+```
+
+---
+
+## get_meeting_recording_context
+
+Get context from meeting recordings including transcript and summary.
+
+### Input Schema
+
+```typescript
+{
+  meetingRecordingId: string;
+  tokenOffset?: number; // For pagination, default: 0
+}
+```
+
+---
+
+## create_meeting_recording_clip
+
+Create a clip from a meeting recording.
+
+### Input Schema
+
+```typescript
+{
+  meetingRecordingId: string;
+  startSeconds: number;
+  endSeconds: number;
+  title: string;
+  description?: string;
+}
+```
+
+---
+
+## send_notification
+
+Send notifications via email or Slack.
+
+### Input Schema
+
+```typescript
+{
+  channel: 'email' | 'slack' | 'both';
+  emailSubject?: string; // Required for email
+  emailBody?: string; // Required for email, HTML format
+  slackParagraphs?: string[]; // Required for Slack
+  reasoning: string; // Why sending this notification
+  sendAt?: string; // ISO datetime for scheduling
+}
+```
+
+---
+
+## web_search
+
+Search the web for information.
+
+### Input Schema
+
+```typescript
+{
+  userAnswer: string; // Search query
+  otherImportantDetails: string; // Additional context
+  howDeep: 'VERY_DEEP' | 'MEDIUM' | 'BASIC';
+}
+```
+
+---
+
+## get_share_url
+
+Get a shareable URL for a CRM object.
+
+### Input Schema
+
+```typescript
+{
+  objectId: string;
+  objectType: "native_meetingrecording" | "native_meetingrecordingclip" |
+              "native_pipeline" | "native_view" | "native_page" |
+              "native_thread" | "native_action";
+}
+```
+
+---
+
+## create_custom_property
+
+Create custom properties for organizations or opportunities.
+
+### Input Schema
+
+```typescript
+{
+  objectTypeId: 'native_opportunity' | 'native_organization';
+  propertyTypeId: string; // textarea, integer, float, currency, percent, datetime,
+                          // url, email, phone, boolean, picklist, multipicklist
+  name: string;
+  description: string;
+  aiManaged: boolean; // Whether AI can populate
+  useWeb: boolean; // MUST be false for opportunities
+  options?: Array<{ // Required for picklist/multipicklist
+    name: string;
+    description: string;
+  }>;
+}
+```
+
+---
+
+# Pagination
+
+When searching for CRM objects, large result sets are automatically paginated.
+
+## How It Works
+
+- Pagination applies at the **top level** of the response
+- Results paginate when they exceed the 20,000 token limit
+- Use `nextOffset` from the response for the next page
+
+## Response Fields
+
+| Field | Location | Type | Description |
+|-------|----------|------|-------------|
+| `offset` | Request | number | Starting position (default: 0) |
+| `hasMore` | Response | boolean | More results available |
+| `nextOffset` | Response | number | Value for next request |
+| `totalCount` | Per object | number | Total results for that type |
+| `results` | Per object | array | Returned objects |
+
+## Example
+
+```typescript
+let offset = undefined;
+let hasMore = true;
+
+while (hasMore) {
+  const response = await client.mcpCallTool('search_objects', {
+    offset,
+    queries: [{ objectType: 'native_contact' }]
+  });
+
+  const data = JSON.parse(response.data?.content[0]?.text);
+  const contacts = data.native_contact?.results || [];
+
+  // Process contacts...
+
+  hasMore = data.hasMore;
+  offset = data.nextOffset;
+}
+```
+
+---
+
+# Common Patterns
+
+## Object References
+
+Many tools use object references in the format: `workspaceId : objectType : objectId`
+
+## Date Formats
+
+All dates should be in ISO 8601 format: `YYYY-MM-DDTHH:mm:ssZ`
+
+## Email Validation
+
+Email addresses in owner fields must belong to workspace members.
+
+## Custom Property IDs
+
+- For picklists: Use `custom/{propertyId}/{optionId}`
+- For multipicklists: Create separate updates for each selected option
+
+## HTML Content Rules
+
+When providing HTML content:
+- No inline styles or style attributes
+- Use semantic HTML tags
+- Tables should be clean without styling
+- Reference CRM objects with data attributes
