@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--color-zinc-950);
+  --color-foreground: var(--color-zinc-50);
+  --color-card: var(--color-zinc-900);
+  --color-card-foreground: var(--color-zinc-50);
+  --color-popover: var(--color-zinc-900);
+  --color-popover-foreground: var(--color-zinc-50);
+  --color-primary: var(--color-zinc-50);
+  --color-primary-foreground: var(--color-zinc-900);
+  --color-secondary: var(--color-zinc-800);
+  --color-secondary-foreground: var(--color-zinc-50);
+  --color-muted: var(--color-zinc-800);
+  --color-muted-foreground: var(--color-zinc-400);
+  --color-accent: var(--color-zinc-800);
+  --color-accent-foreground: var(--color-zinc-50);
+  --color-destructive: var(--color-red-900);
+  --color-destructive-foreground: var(--color-zinc-50);
+  --color-border: var(--color-zinc-800);
+  --color-input: var(--color-zinc-800);
+  --color-ring: var(--color-zinc-300);
+  --radius: 0.5rem;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
