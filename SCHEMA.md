@@ -1316,13 +1316,13 @@ Get a shareable URL for a CRM object.
 
 ## create_custom_property
 
-Create custom properties for organizations or opportunities.
+Create custom properties for people, organizations, or opportunities.
 
 ### Input Schema
 
 ```typescript
 {
-  objectTypeId: 'native_opportunity' | 'native_organization';
+  objectTypeId: 'native_person' | 'native_opportunity' | 'native_organization';
   propertyTypeId: string; // textarea, integer, float, currency, percent, datetime,
                           // url, email, phone, boolean, picklist, multipicklist
   name: string;
