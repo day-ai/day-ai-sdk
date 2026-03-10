@@ -1,6 +1,7 @@
 // Day AI Service - OAuth and MCP client for mobile
 import { DayAIClient } from '../lib/DayAIClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { startAuthFlow } from './OAuthService';
 
 const DAY_AI_STORAGE_KEY = '@day_ai_mobile:credentials';
 
@@ -76,9 +77,41 @@ export class DayAIService {
   }
 
   /**
-   * Connect to Day AI with OAuth credentials
-   * For Phase 2: Manual token entry
-   * For Phase 3: Full OAuth flow with Expo AuthSession
+   * Connect to Day AI with automated OAuth flow
+   * Opens browser, registers client, gets tokens automatically
+   */
+  async connectWithOAuth(): Promise<ConnectionStatus> {
+    try {
+      console.log('[DayAIService] Starting OAuth flow...');
+
+      // Start OAuth flow - this opens the browser
+      const credentials = await startAuthFlow();
+
+      console.log('[DayAIService] OAuth flow completed, saving credentials');
+
+      // Save credentials
+      await AsyncStorage.setItem(DAY_AI_STORAGE_KEY, JSON.stringify(credentials));
+
+      // Initialize client
+      await this.initializeClient(credentials);
+
+      // Test connection
+      const status = await this.getConnectionStatus();
+      if (!status.connected) {
+        throw new Error('Connection test failed');
+      }
+
+      console.log('[DayAIService] Successfully connected to Day AI');
+      return status;
+    } catch (error) {
+      console.error('[DayAIService] OAuth connection failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Connect to Day AI with manual credentials
+   * For users who already have OAuth credentials
    */
   async connect(credentials: DayAICredentials): Promise<ConnectionStatus> {
     try {

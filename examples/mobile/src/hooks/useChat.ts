@@ -269,14 +269,28 @@ export function useChat() {
     []
   );
 
-  const connectDayAI = useCallback(
+  const connectDayAI = useCallback(async () => {
+    try {
+      await dayAIService.connectWithOAuth();
+      await checkDayAIConnection();
+      return { success: true };
+    } catch (error) {
+      console.error('[useChat] Day AI OAuth connection failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection failed',
+      };
+    }
+  }, []);
+
+  const connectDayAIManual = useCallback(
     async (credentials: { clientId: string; clientSecret: string; refreshToken: string }) => {
       try {
         await dayAIService.connect(credentials);
         await checkDayAIConnection();
         return { success: true };
       } catch (error) {
-        console.error('[useChat] Day AI connection failed:', error);
+        console.error('[useChat] Day AI manual connection failed:', error);
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Connection failed',
@@ -303,6 +317,7 @@ export function useChat() {
     clearMessages,
     updateSettings,
     connectDayAI,
+    connectDayAIManual,
     disconnectDayAI,
   };
 }

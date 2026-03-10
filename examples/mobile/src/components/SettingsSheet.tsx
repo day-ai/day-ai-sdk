@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassView } from './GlassView';
@@ -22,11 +23,7 @@ interface SettingsSheetProps {
   dayAIConnected: boolean;
   onSaveSettings: (apiKey: string, model: string) => void;
   onClearChat: () => void;
-  onConnectDayAI: (credentials: {
-    clientId: string;
-    clientSecret: string;
-    refreshToken: string;
-  }) => Promise<{ success: boolean; error?: string }>;
+  onConnectDayAI: () => Promise<{ success: boolean; error?: string }>;
   onDisconnectDayAI: () => Promise<void>;
 }
 
@@ -47,9 +44,6 @@ export function SettingsSheet({
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Day AI connection state
-  const [dayAIClientId, setDayAIClientId] = useState('');
-  const [dayAIClientSecret, setDayAIClientSecret] = useState('');
-  const [dayAIRefreshToken, setDayAIRefreshToken] = useState('');
   const [dayAIConnecting, setDayAIConnecting] = useState(false);
   const [dayAIError, setDayAIError] = useState<string | null>(null);
 
@@ -66,28 +60,14 @@ export function SettingsSheet({
   };
 
   const handleConnectDayAI = async () => {
-    if (!dayAIClientId.trim() || !dayAIClientSecret.trim() || !dayAIRefreshToken.trim()) {
-      setDayAIError('Please fill in all Day AI credentials');
-      return;
-    }
-
     setDayAIConnecting(true);
     setDayAIError(null);
 
-    const result = await onConnectDayAI({
-      clientId: dayAIClientId.trim(),
-      clientSecret: dayAIClientSecret.trim(),
-      refreshToken: dayAIRefreshToken.trim(),
-    });
+    const result = await onConnectDayAI();
 
     setDayAIConnecting(false);
 
-    if (result.success) {
-      // Clear fields on success
-      setDayAIClientId('');
-      setDayAIClientSecret('');
-      setDayAIRefreshToken('');
-    } else {
+    if (!result.success) {
       setDayAIError(result.error || 'Connection failed');
     }
   };
@@ -96,6 +76,7 @@ export function SettingsSheet({
     await onDisconnectDayAI();
     setDayAIError(null);
   };
+
 
   const models = [
     {
@@ -278,7 +259,7 @@ export function SettingsSheet({
                   </Text>
 
                   {dayAIConnected ? (
-                    // Connected state
+                    // Connected state - similar to desktop
                     <View>
                       <View className="flex-row items-center mb-3">
                         <View className="w-3 h-3 rounded-full bg-green-500 mr-2" />
@@ -300,68 +281,54 @@ export function SettingsSheet({
                       </Pressable>
                     </View>
                   ) : (
-                    // Disconnected state
+                    // Not connected - show simple Connect button or web notice
                     <View>
-                      <Text className="text-xs text-gray-500 mb-2">
-                        Run yarn oauth:setup in the SDK root to get credentials
-                      </Text>
+                      {Platform.OS === 'web' ? (
+                        // Web platform - OAuth not supported
+                        <View className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)' }}>
+                          <Text className="text-xs text-yellow-800 leading-relaxed">
+                            <Text className="font-semibold">OAuth flow requires native app.</Text>{'\n\n'}
+                            To connect Day AI:{'\n'}
+                            • Test on iOS Simulator (Cmd+Shift+I in Expo){'\n'}
+                            • Or build and run on a physical device{'\n\n'}
+                            The web version is for UI/UX testing only.
+                          </Text>
+                        </View>
+                      ) : (
+                        // Native platform - show Connect button
+                        <View>
+                          <View className="mb-3 p-3 rounded-xl" style={{ backgroundColor: 'rgba(74, 154, 154, 0.1)' }}>
+                            <Text className="text-xs text-gray-700 leading-relaxed">
+                              Click Connect to authorize Day AI in your browser. Credentials will be stored securely and refreshed automatically.
+                            </Text>
+                          </View>
 
-                      <TextInput
-                        className="px-4 py-3 rounded-xl bg-white/50 text-gray-800 mb-2"
-                        value={dayAIClientId}
-                        onChangeText={setDayAIClientId}
-                        placeholder="Client ID"
-                        placeholderTextColor="#9ca3af"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
+                          {dayAIError && (
+                            <View className="mb-3 p-3 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+                              <Text className="text-sm text-red-600">{dayAIError}</Text>
+                            </View>
+                          )}
 
-                      <TextInput
-                        className="px-4 py-3 rounded-xl bg-white/50 text-gray-800 mb-2"
-                        value={dayAIClientSecret}
-                        onChangeText={setDayAIClientSecret}
-                        placeholder="Client Secret"
-                        placeholderTextColor="#9ca3af"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        secureTextEntry
-                      />
-
-                      <TextInput
-                        className="px-4 py-3 rounded-xl bg-white/50 text-gray-800 mb-3"
-                        value={dayAIRefreshToken}
-                        onChangeText={setDayAIRefreshToken}
-                        placeholder="Refresh Token"
-                        placeholderTextColor="#9ca3af"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        secureTextEntry
-                      />
-
-                      {dayAIError && (
-                        <View className="mb-3 p-3 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
-                          <Text className="text-sm text-red-600">{dayAIError}</Text>
+                          <Pressable
+                            onPress={handleConnectDayAI}
+                            disabled={dayAIConnecting}
+                            className="flex-row items-center justify-center py-3 px-4 rounded-xl"
+                            style={{
+                              backgroundColor: 'rgba(74, 154, 154, 0.15)',
+                              opacity: dayAIConnecting ? 0.5 : 1,
+                            }}
+                          >
+                            <Ionicons
+                              name={dayAIConnecting ? 'hourglass-outline' : 'cloud-upload-outline'}
+                              size={20}
+                              color="#4a9a9a"
+                            />
+                            <Text className="text-primary-700 ml-2 font-medium">
+                              {dayAIConnecting ? 'Connecting...' : 'Connect to Day AI'}
+                            </Text>
+                          </Pressable>
                         </View>
                       )}
-
-                      <Pressable
-                        onPress={handleConnectDayAI}
-                        disabled={dayAIConnecting}
-                        className="flex-row items-center justify-center py-3 px-4 rounded-xl"
-                        style={{
-                          backgroundColor: 'rgba(74, 154, 154, 0.15)',
-                          opacity: dayAIConnecting ? 0.5 : 1,
-                        }}
-                      >
-                        <Ionicons
-                          name={dayAIConnecting ? 'hourglass-outline' : 'link-outline'}
-                          size={20}
-                          color="#4a9a9a"
-                        />
-                        <Text className="text-primary-700 ml-2 font-medium">
-                          {dayAIConnecting ? 'Connecting...' : 'Connect'}
-                        </Text>
-                      </Pressable>
                     </View>
                   )}
                 </View>
