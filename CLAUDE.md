@@ -29,7 +29,9 @@ Contacts, Opportunities, Meetings, Pages, etc.
 
 ### Core SDK (`src/`)
 - **DayAIClient**: OAuth 2.0 with auto token refresh
-- **MCP Tools**: 20+ tools for CRM operations (search, create, update, get context)
+- **Convenience methods**: `search()`, `createPerson()`, `createOrganization()`, `createOpportunity()`, `sendNotification()`, `keywordSearch()` — typed wrappers that return parsed results
+- **Raw MCP access**: `searchObjects()`, `findMeetingsByAttendee()` return raw `ApiResponse<McpToolResult>` for full control; `mcpCallTool()` is the escape hatch for any tool
+- **Types**: `src/types.ts` exports `ObjectType`, `WhereCondition`, `SearchOptions`, `SearchResponse`, and input types for all convenience methods
 - Full TypeScript types and error handling
 
 ### Example 1: Desktop App (`examples/desktop/`)
@@ -56,8 +58,9 @@ This is a **template** - clone it to build daily digests, scheduled reports, mon
 ```
 day-ai-sdk/
 ├── src/                 # Core SDK
-│   ├── DayAIClient.ts   # Main client with OAuth + MCP
-│   └── types.ts         # TypeScript types
+│   ├── client.ts        # DayAIClient (OAuth + MCP + convenience methods)
+│   ├── types.ts         # TypeScript types (ObjectType, WhereCondition, inputs, responses)
+│   └── index.ts         # Re-exports
 ├── examples/
 │   ├── desktop/         # Electron notes app (template)
 │   │   ├── electron/    # Main process (IPC, services)
@@ -120,71 +123,75 @@ vercel
 3. Update tools and UI for your use case
 4. Day AI MCP integration works out of the box
 
-## MCP Tools Available
+## Using the SDK
 
-Day AI provides 20+ MCP tools including:
+### Convenience Methods (recommended for most use cases)
+```typescript
+// Search
+const contacts = await client.search('native_contact', { propertyId: 'email', operator: 'contains', value: '@acme.com' });
 
-### Search & Query
-- `search_objects` - **Primary search tool** with property AND relationship filtering
-  - Search by properties: `{propertyId, operator, value}`
-  - Search by relationships: `{relationship, targetObjectType, targetObjectId, operator}`
-  - Use `includeRelationships: true` to see connected objects
-  - Use `propertiesToReturn: '*'` for all properties
-- `keyword_search` - Simple keyword-based search
+// Create
+await client.createPerson({ email: 'jane@acme.com', firstName: 'Jane' });
+await client.createOrganization({ domain: 'acme.com', name: 'Acme Inc' });
+await client.createOpportunity({ title: 'Deal', stageId: 'stage-id', domain: 'acme.com' });
 
-### CRM Operations
+// Notify
+await client.sendNotification({ channel: 'email', emailSubject: 'Hi', emailBody: '<p>Hello</p>', reasoning: 'test' });
+
+// Keyword search
+await client.keywordSearch([{ objectType: 'native_contact', keywords: ['acme'] }]);
+```
+
+### Raw MCP Access (for AI agent tool execution and full control)
+```typescript
+// searchObjects / findMeetingsByAttendee return raw ApiResponse<McpToolResult>
+const result = await client.searchObjects([{ objectType: 'native_contact' }], { propertiesToReturn: '*' });
+const parsed = JSON.parse(result.data?.content[0]?.text);
+
+// mcpCallTool works with any of the 20+ MCP tools
+await client.mcpCallTool('get_meeting_recording_context', { objectId: 'meeting-id' });
+```
+
+### MCP Tools Available
+
+Day AI provides 20+ MCP tools. Key ones:
+
+- `search_objects` / `keyword_search` - Search & query
 - `create_or_update_person_organization` - CRUD for contacts/companies
 - `create_or_update_opportunity` - CRUD for deals
+- `send_notification` - Email/Slack notifications
 - `get_meeting_recording_context` - Meeting transcripts
 
 ### Key Search Patterns
 
 **Find meetings by attendee (relationship search):**
 ```typescript
-{
-  queries: [{
-    objectType: 'native_meetingrecording',
-    where: {
-      relationship: 'attendee',
-      targetObjectType: 'native_contact',
-      targetObjectId: 'john@acme.com',  // email for contacts
-      operator: 'eq'
-    }
-  }],
-  includeRelationships: true
-}
+await client.search('native_meetingrecording', {
+  relationship: 'attendee',
+  targetObjectType: 'native_contact',
+  targetObjectId: 'john@acme.com',  // email for contacts
+  operator: 'eq'
+}, { includeRelationships: true });
 ```
 
 **Find meetings with a company:**
 ```typescript
-{
-  queries: [{
-    objectType: 'native_meetingrecording',
-    where: {
-      relationship: 'attendee',
-      targetObjectType: 'native_organization',
-      targetObjectId: 'acme.com',  // domain for orgs
-      operator: 'eq'
-    }
-  }],
-  includeRelationships: true
-}
+await client.search('native_meetingrecording', {
+  relationship: 'attendee',
+  targetObjectType: 'native_organization',
+  targetObjectId: 'acme.com',  // domain for orgs
+  operator: 'eq'
+}, { includeRelationships: true });
 ```
 
 **Find notes on an organization:**
 ```typescript
-{
-  queries: [{
-    objectType: 'native_context',
-    where: {
-      relationship: 'parent',
-      targetObjectType: 'native_organization',
-      targetObjectId: 'acme.com',
-      operator: 'eq'
-    }
-  }],
-  includeRelationships: true
-}
+await client.search('native_context', {
+  relationship: 'parent',
+  targetObjectType: 'native_organization',
+  targetObjectId: 'acme.com',
+  operator: 'eq'
+}, { includeRelationships: true });
 ```
 
 See SCHEMA.md for full tool list and relationship definitions.
@@ -213,7 +220,8 @@ See SCHEMA.md for full tool list and relationship definitions.
 
 ## Key Files to Know
 
-- `src/DayAIClient.ts` - Core SDK client
+- `src/client.ts` - Core SDK client (DayAIClient with convenience methods + raw MCP access)
+- `src/types.ts` - All TypeScript types for the convenience layer
 - `examples/desktop/electron/services/AgentService.ts` - Claude integration
 - `examples/desktop/electron/services/ToolExecutor.ts` - Tool execution logic
 - `examples/desktop/src/components/ChatPane.tsx` - Chat UI with streaming

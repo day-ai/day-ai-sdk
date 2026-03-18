@@ -1,4 +1,16 @@
 import * as dotenv from "dotenv";
+import type {
+  ObjectType,
+  WhereCondition,
+  SearchOptions,
+  SearchQuery,
+  SearchResponse,
+  KeywordSearchQuery,
+  CreatePersonInput,
+  CreateOrganizationInput,
+  CreateOpportunityInput,
+  SendNotificationInput,
+} from "./types";
 
 // Load environment variables
 dotenv.config();
@@ -358,6 +370,146 @@ export class DayAIClient {
       name: toolName,
       arguments: args,
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Convenience methods — typed wrappers around mcpCallTool
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Parse the JSON text from an MCP tool result.
+   * Returns the parsed object, or throws if the tool returned an error.
+   */
+  private parseMcpResult<T = any>(response: ApiResponse<McpToolResult>): T {
+    if (!response.success) {
+      throw new Error(response.error ?? 'MCP call failed');
+    }
+    if (response.data?.isError) {
+      throw new Error(response.data.content[0]?.text ?? 'MCP tool error');
+    }
+    const text = response.data?.content[0]?.text;
+    if (!text) {
+      throw new Error('Empty MCP tool response');
+    }
+    return JSON.parse(text) as T;
+  }
+
+  /**
+   * Search for objects by type, with optional filters.
+   * Returns parsed, typed results.
+   *
+   * @example
+   * const results = await client.search('native_contact', {
+   *   propertyId: 'email', operator: 'contains', value: '@acme.com'
+   * });
+   */
+  async search(
+    objectType: ObjectType | string,
+    where?: WhereCondition,
+    options?: SearchOptions,
+  ): Promise<SearchResponse> {
+    const raw = await this.mcpCallTool('search_objects', {
+      ...options,
+      queries: [{ objectType, ...(where ? { where } : {}) }],
+    });
+    return this.parseMcpResult<SearchResponse>(raw);
+  }
+
+  /**
+   * Search with multiple queries (raw MCP result for full control).
+   * This is the method used by mcp-tool-example.ts.
+   */
+  async searchObjects(
+    queries: SearchQuery[],
+    options?: SearchOptions,
+  ): Promise<ApiResponse<McpToolResult>> {
+    return this.mcpCallTool('search_objects', {
+      ...options,
+      queries,
+    });
+  }
+
+  /**
+   * Find meetings by attendee email (contact) or domain (organization).
+   */
+  async findMeetingsByAttendee(
+    emailOrDomain: string,
+    options?: SearchOptions,
+  ): Promise<ApiResponse<McpToolResult>> {
+    const isOrg = !emailOrDomain.includes('@');
+    return this.mcpCallTool('search_objects', {
+      ...options,
+      queries: [
+        {
+          objectType: 'native_meetingrecording',
+          where: {
+            relationship: 'attendee',
+            targetObjectType: isOrg ? 'native_organization' : 'native_contact',
+            targetObjectId: emailOrDomain,
+            operator: 'eq',
+          },
+        },
+      ],
+    });
+  }
+
+  /**
+   * Keyword search across object types.
+   */
+  async keywordSearch(searches: KeywordSearchQuery[]): Promise<any> {
+    const raw = await this.mcpCallTool('keyword_search', {
+      searchOperations: searches,
+    });
+    return this.parseMcpResult(raw);
+  }
+
+  /**
+   * Create or update a person (contact).
+   */
+  async createPerson(input: CreatePersonInput): Promise<any> {
+    const { customProperties, ...standardProperties } = input;
+    const raw = await this.mcpCallTool('create_or_update_person_organization', {
+      isCreating: true,
+      objectType: 'Person',
+      standardProperties,
+      ...(customProperties ? { customProperties } : {}),
+    });
+    return this.parseMcpResult(raw);
+  }
+
+  /**
+   * Create or update an organization.
+   */
+  async createOrganization(input: CreateOrganizationInput): Promise<any> {
+    const { customProperties, ...standardProperties } = input;
+    const raw = await this.mcpCallTool('create_or_update_person_organization', {
+      isCreating: true,
+      objectType: 'Organization',
+      standardProperties,
+      ...(customProperties ? { customProperties } : {}),
+    });
+    return this.parseMcpResult(raw);
+  }
+
+  /**
+   * Create or update an opportunity.
+   */
+  async createOpportunity(input: CreateOpportunityInput): Promise<any> {
+    const { customProperties, ...standardProperties } = input;
+    const raw = await this.mcpCallTool('create_or_update_opportunity', {
+      isCreating: true,
+      standardProperties,
+      ...(customProperties ? { customProperties } : {}),
+    });
+    return this.parseMcpResult(raw);
+  }
+
+  /**
+   * Send a notification via email, Slack, or both.
+   */
+  async sendNotification(input: SendNotificationInput): Promise<any> {
+    const raw = await this.mcpCallTool('send_notification', input);
+    return this.parseMcpResult(raw);
   }
 
 }

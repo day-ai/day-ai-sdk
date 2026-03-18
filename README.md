@@ -1,184 +1,19 @@
 # Day AI SDK
 
-**Build AI-powered business tools in minutes, not months.**
+The Day AI platform as a TypeScript SDK.
 
-One command. Full MCP client. Complete CRM integration. Your app instantly queries contacts, opportunities, meetings, and more—all through natural language.
+Anything you can do in Day AI, you can do with this SDK — search contacts, create opportunities, pull meeting transcripts. Use it like a plain API, build AI-powered tools, or vibe code with Claude.
 
-```bash
-git clone https://github.com/day-ai/day-ai-sdk
-cd day-ai-sdk
-claude   # Ask Claude to help you build
-```
-
----
-
-## What You Get
-
-Clone this repo and you have:
-
-- **Full MCP Client** — Model Context Protocol integration, ready for Claude Desktop or any MCP-enabled system
-- **20+ CRM Tools** — Search, create, update contacts, opportunities, meetings, transcripts
-- **OAuth 2.0** — Automatic token refresh, zero auth code to write
-- **Production Templates** — Desktop (Electron), Mobile (React Native), Web/Cron (Vercel)
-- **Claude AI Integration** — Streaming responses, tool use, thinking mode
-
-## The Power
-
-Traditional CRM integrations take months. Day AI SDK inverts this:
-
-```
-Your App
-    ↓
-Day AI SDK (OAuth + MCP)
-    ↓
-Day AI Platform (AI-native CRM)
-    ↓
-Contacts, Opportunities, Meetings, Transcripts...
-```
-
-Your app can ask questions like:
-- *"Who reported this bug? Pull their contact history."*
-- *"What opportunities are blocked by this?"*
-- *"When did we discuss this in meetings?"*
-
-The AI agent traverses the entire business graph. No custom integrations. No API mapping. Just natural language.
-
----
-
-## Quick Start
-
-### Option 1: Use Claude Code (Recommended)
+## Get Started
 
 ```bash
-git clone https://github.com/day-ai/day-ai-sdk
-cd day-ai-sdk
-claude
-```
-
-Ask Claude:
-- "How do I run the desktop example?"
-- "Help me build a bug tracker with CRM integration"
-- "Show me how the OAuth flow works"
-
-Use `/app` to get guided through building a new application from scratch.
-
-### Option 2: Run an Example
-
-**Desktop App** (Electron + React + Claude):
-```bash
-cd examples/desktop
-npm install
-npm run dev
-```
-
-**Vercel Cron** (Automated workflows):
-```bash
-cd examples/vercel-weather-cron
-npm install
-npm run dev
-```
-
-### Option 3: Use the SDK Directly
-
-```bash
-# Clone and build the SDK
 git clone https://github.com/day-ai/day-ai-sdk
 cd day-ai-sdk
 yarn install && yarn build
-```
 
-```typescript
-import { DayAIClient } from './src';
-
-const client = new DayAIClient();
-await client.mcpInitialize();
-
-// Search for contacts
-const contacts = await client.mcpCallTool('search_objects', {
-  queries: [{
-    objectType: 'native_contact',
-    where: {
-      propertyId: 'email',
-      operator: 'contains',
-      value: '@acme.com'
-    }
-  }]
-});
-
-// Find meetings with a company
-const meetings = await client.mcpCallTool('search_objects', {
-  queries: [{
-    objectType: 'native_meetingrecording',
-    where: {
-      relationship: 'attendee',
-      targetObjectType: 'native_organization',
-      targetObjectId: 'acme.com',
-      operator: 'eq'
-    }
-  }],
-  includeRelationships: true
-});
-```
-
----
-
-## Example Templates
-
-### Desktop Notes App
-
-A fully-featured **Electron desktop app**—not a demo, a production template.
-
-| Feature | Description |
-|---------|-------------|
-| **3-Panel Layout** | Notes list, rich editor, AI chat |
-| **Claude Integration** | Streaming responses with tool use |
-| **MCP Tools** | AI queries Day AI CRM automatically |
-| **Native Tools** | AI can read/update local notes |
-
-**Clone it to build:** Bug trackers, opportunity managers, meeting prep tools, task lists.
-
-```bash
-cd examples/desktop && npm install && npm run dev
-```
-
-### Vercel Weather Cron
-
-A **serverless automation template**—daily jobs with zero infrastructure.
-
-| Feature | Description |
-|---------|-------------|
-| **Vercel Cron** | Runs daily at 9 AM |
-| **MCP Integration** | Uses `send_notification` tool |
-| **One-Click Deploy** | Environment variables in Vercel dashboard |
-
-**Clone it to build:** Daily digests, scheduled reports, monitoring alerts, data enrichment.
-
-```bash
-cd examples/vercel-weather-cron && npm install && npm run dev
-```
-
-### Mobile App
-
-A **React Native** template with OAuth deep linking and AsyncStorage persistence.
-
-```bash
-cd examples/mobile && npm install && npm run ios
-```
-
----
-
-## OAuth Setup
-
-Before using the SDK, you need Day AI credentials:
-
-```bash
-# 1. Copy environment template
+# Set up OAuth credentials
 cp .env.example .env
-
-# 2. Set your integration name
-# Edit .env: INTEGRATION_NAME=My Custom Integration
-
-# 3. Run OAuth wizard
+# Edit .env: set INTEGRATION_NAME
 yarn oauth:setup
 ```
 
@@ -186,15 +21,132 @@ This registers your OAuth client, opens your browser for authorization, and save
 
 ---
 
-## Configuration
+## Choose Your Path
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `INTEGRATION_NAME` | Your integration name | Required |
-| `DAY_AI_BASE_URL` | Day AI instance URL | `https://day.ai` |
-| `CLIENT_ID` | OAuth client ID | Auto-populated |
-| `CLIENT_SECRET` | OAuth client secret | Auto-populated |
-| `REFRESH_TOKEN` | OAuth refresh token | Auto-populated |
+### 1. Use as an API
+
+For scripts, backends, cron jobs, and anywhere you'd use a REST API.
+
+```typescript
+import { DayAIClient } from './src';
+
+const client = new DayAIClient();
+
+// Search for contacts
+const contacts = await client.search('native_contact', {
+  propertyId: 'email', operator: 'contains', value: '@acme.com'
+});
+
+// Find meetings with someone
+const meetings = await client.search('native_meetingrecording', {
+  relationship: 'attendee',
+  targetObjectType: 'native_contact',
+  targetObjectId: 'john@acme.com',
+  operator: 'eq'
+}, { includeRelationships: true });
+
+// Create a contact
+await client.createPerson({
+  email: 'jane@acme.com',
+  firstName: 'Jane',
+  lastName: 'Smith'
+});
+
+// Create an opportunity
+await client.createOpportunity({
+  title: 'Acme Enterprise Deal',
+  stageId: 'stage-id',
+  domain: 'acme.com',
+  expectedRevenue: 50000
+});
+
+// Send a notification
+await client.sendNotification({
+  channel: 'email',
+  emailSubject: 'Daily Pipeline Summary',
+  emailBody: '<h1>3 deals closing this week</h1>',
+  reasoning: 'Weekly pipeline digest'
+});
+```
+
+Under the hood, these call MCP tools on the Day AI platform. For full control, use `mcpCallTool()` directly:
+
+```typescript
+const result = await client.mcpCallTool('search_objects', {
+  queries: [{ objectType: 'native_contact' }],
+  propertiesToReturn: '*'
+});
+```
+
+See [SCHEMA.md](SCHEMA.md) for the full tool & schema reference.
+
+### 2. Build AI-Powered Tools
+
+For developers building apps with Claude, GPT, or other LLMs.
+
+MCP tools are your LLM's toolkit. The pattern:
+
+```typescript
+import { DayAIClient } from './src';
+import Anthropic from '@anthropic-ai/sdk';
+
+const client = new DayAIClient();
+const anthropic = new Anthropic();
+
+// 1. Get tool definitions from Day AI
+const toolsResult = await client.mcpListTools();
+const tools = toolsResult.data!.tools;
+
+// 2. Pass tools to your LLM
+const response = await anthropic.messages.create({
+  model: 'claude-sonnet-4-20250514',
+  messages: [{ role: 'user', content: 'Find all meetings with Acme last month' }],
+  tools: tools.map(t => ({
+    name: t.name,
+    description: t.description ?? '',
+    input_schema: t.inputSchema
+  }))
+});
+
+// 3. Execute whatever the LLM asks for
+for (const block of response.content) {
+  if (block.type === 'tool_use') {
+    const result = await client.mcpCallTool(block.name, block.input as Record<string, any>);
+    // Feed result back to the LLM for the next turn
+  }
+}
+```
+
+See the example apps for complete implementations: [Desktop](examples/desktop/), [Desktop Claude Agent SDK](examples/desktop-claude-agent-sdk/), [Community Builder](examples/community-builder/), [Mobile](examples/mobile/).
+
+### 3. Vibe Code with Claude
+
+Clone a template. Open Claude Code. Describe what you want.
+
+```bash
+git clone https://github.com/day-ai/day-ai-sdk
+cd day-ai-sdk/examples/desktop
+claude
+```
+
+Then ask:
+- "Build a bug tracker with CRM integration"
+- "Add Slack notifications when deals close"
+- "Show meeting prep for tomorrow's calls"
+
+The AI agent has full context on the SDK and all available MCP tools.
+
+---
+
+## Example Templates
+
+| Template | Description | Stack | Run |
+|----------|-------------|-------|-----|
+| [Desktop](examples/desktop/) | Notes app with AI chat + CRM | Electron, React, Claude SDK | `cd examples/desktop && npm run dev` |
+| [Desktop Agent SDK](examples/desktop-claude-agent-sdk/) | Desktop app using Claude Agent SDK | Electron, React, Agent SDK | `cd examples/desktop-claude-agent-sdk && npm run dev` |
+| [Community Builder](examples/community-builder/) | Community management tool | Next.js | `cd examples/community-builder && npm run dev` |
+| [Mobile](examples/mobile/) | Mobile app with OAuth deep linking | React Native, Expo | `cd examples/mobile && npm run ios` |
+| [Vercel Cron](examples/vercel-weather-cron/) | Automated daily workflows | Next.js, Vercel Cron | `cd examples/vercel-weather-cron && npm run dev` |
 
 ---
 
@@ -217,61 +169,15 @@ See [SCHEMA.md](SCHEMA.md) for complete tool documentation, input schemas, and o
 
 ---
 
-## Key Patterns
+## Configuration
 
-### Search by Property
-
-```typescript
-// Find contacts by email domain
-await client.mcpCallTool('search_objects', {
-  queries: [{
-    objectType: 'native_contact',
-    where: {
-      propertyId: 'email',
-      operator: 'contains',
-      value: '@company.com'
-    }
-  }]
-});
-```
-
-### Search by Relationship
-
-```typescript
-// Find meetings with a specific person
-await client.mcpCallTool('search_objects', {
-  queries: [{
-    objectType: 'native_meetingrecording',
-    where: {
-      relationship: 'attendee',
-      targetObjectType: 'native_contact',
-      targetObjectId: 'john@acme.com',
-      operator: 'eq'
-    }
-  }],
-  includeRelationships: true
-});
-```
-
-### Pagination
-
-```typescript
-let offset = undefined;
-let hasMore = true;
-
-while (hasMore) {
-  const response = await client.mcpCallTool('search_objects', {
-    offset,
-    queries: [{ objectType: 'native_contact' }]
-  });
-
-  const data = JSON.parse(response.data?.content[0]?.text);
-  // Process data.native_contact.results
-
-  hasMore = data.hasMore;
-  offset = data.nextOffset;
-}
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `INTEGRATION_NAME` | Your integration name | Required |
+| `DAY_AI_BASE_URL` | Day AI instance URL | `https://day.ai` |
+| `CLIENT_ID` | OAuth client ID | Auto-populated |
+| `CLIENT_SECRET` | OAuth client secret | Auto-populated |
+| `REFRESH_TOKEN` | OAuth refresh token | Auto-populated |
 
 ---
 
@@ -286,9 +192,9 @@ while (hasMore) {
                             ▼
 ┌─────────────────────────────────────────────────────────┐
 │                      Day AI SDK                          │
+│  • Typed convenience methods (search, create, notify)   │
+│  • Raw MCP access (mcpCallTool for full control)        │
 │  • OAuth 2.0 with auto token refresh                    │
-│  • MCP client (Model Context Protocol)                  │
-│  • TypeScript types                                     │
 └─────────────────────────────────────────────────────────┘
                             │
                             ▼
@@ -309,26 +215,6 @@ while (hasMore) {
 
 ---
 
-## File Structure
-
-```
-day-ai-sdk/
-├── src/
-│   ├── client.ts          # DayAIClient (OAuth + MCP)
-│   └── index.ts           # Exports
-├── examples/
-│   ├── desktop/           # Electron + React + Claude SDK
-│   ├── desktop-claude-agent-sdk/  # Electron + Claude Agent SDK
-│   ├── mobile/            # React Native + Expo
-│   └── vercel-weather-cron/ # Next.js + Vercel Cron
-├── scripts/
-│   └── oauth-setup.ts     # OAuth wizard
-├── SCHEMA.md              # Object schemas + tool documentation
-└── CLAUDE.md              # Context for Claude sessions
-```
-
----
-
 ## Troubleshooting
 
 | Problem | Solution |
@@ -344,23 +230,6 @@ day-ai-sdk/
 
 - **[SCHEMA.md](SCHEMA.md)** — Object schemas, MCP tool documentation, relationships
 - **[CLAUDE.md](CLAUDE.md)** — Context for Claude sessions
-- **[examples/desktop/README.md](examples/desktop/README.md)** — Desktop app details
-
----
-
-## Support
-
-The best way to get help:
-
-```bash
-cd day-ai-sdk
-claude
-```
-
-Ask anything:
-- "How do I add a new MCP tool call?"
-- "Help me debug this error: [paste error]"
-- "How do I make a desktop app for [use case]?"
 
 ---
 
