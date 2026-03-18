@@ -508,7 +508,7 @@ export class DayAIClient {
    * Send a notification via email, Slack, or both.
    */
   async sendNotification(input: SendNotificationInput): Promise<any> {
-    const raw = await this.mcpCallTool('send_notification', input);
+    const raw = await this.mcpCallTool('send_notification_mcp', input);
     return this.parseMcpResult(raw);
   }
 

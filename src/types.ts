@@ -145,7 +145,8 @@ export interface SendNotificationInput {
   channel: 'email' | 'slack' | 'both';
   emailSubject?: string;
   emailBody?: string;
+  slackFormatting?: 'plain_text' | 'mrkdwn';
   slackParagraphs?: string[];
   reasoning: string;
-  sendAt?: string;
+  slackChannelId?: string;
 }

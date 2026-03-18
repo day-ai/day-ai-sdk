@@ -152,18 +152,48 @@ The AI agent has full context on the SDK and all available MCP tools.
 
 ## Available MCP Tools
 
-Day AI exposes 20+ tools through MCP:
+Which tools you see depends on your assistant tier. Tools are cumulative — higher tiers include everything below.
+
+### Free (no assistant required)
 
 | Category | Tools |
 |----------|-------|
-| **Search** | `search_objects`, `keyword_search` |
-| **CRM** | `create_or_update_person_organization`, `create_or_update_opportunity`, `update_object` |
-| **Content** | `create_page`, `update_page`, `create_email_draft`, `send_email` |
+| **Search** | `search_objects` |
+| **CRM** | `create_or_update_person_organization`, `create_or_update_workspace_context` |
 | **Meetings** | `get_meeting_recording_context`, `create_meeting_recording_clip` |
-| **Actions** | `create_or_update_action` |
-| **Views** | `create_view`, `create_chart` |
-| **Notifications** | `send_notification` |
-| **Utility** | `web_search`, `get_share_url`, `create_custom_property` |
+| **Schema** | `read_crm_schema` |
+| **Utility** | `get_share_url` |
+| **Skills** | `activate_skill`, `deactivate_skill` |
+
+### Turbo
+
+| Category | Tools |
+|----------|-------|
+| **CRM** | `create_or_update_action`, `create_or_update_relationship`, `create_or_update_list` |
+| **Content** | `create_page`, `update_page`, `create_email_draft` |
+| **Notifications** | `send_notification_mcp` |
+| **Settings** | `assistant_settings` |
+| **Skills** | `manage_skills` |
+| **Identity** | `whoami` |
+
+### Professional
+
+| Category | Tools |
+|----------|-------|
+| **CRM** | `create_or_update_opportunity`, `create_or_update_custom_property`, `backfill_custom_property` |
+| **Pipeline** | `analyze_pipeline_metrics` |
+| **Import** | `create_import_from_file`, `save_import_mapping`, `start_import`, `get_import_progress`, `get_import_errors`, `get_imports_by_object_type` |
+| **Data** | `analyze_csv`, `read_csv_file`, `read_file`, `transform_csv` |
+| **Views** | `create_view`, `update_view` |
+| **Integrations** | `connect_slack`, `open_email_sharing_rules` |
+| **Workspace** | `manage_workspace_members` |
+
+### Executive
+
+| Category | Tools |
+|----------|-------|
+| **CRM** | `batch_create_or_update_opportunities`, `batch_create_or_update_people_organizations` |
+| **Prospecting** | `search_prospects` |
 
 See [SCHEMA.md](SCHEMA.md) for complete tool documentation, input schemas, and object relationships.
 

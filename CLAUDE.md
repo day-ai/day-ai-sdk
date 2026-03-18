@@ -154,13 +154,17 @@ await client.mcpCallTool('get_meeting_recording_context', { objectId: 'meeting-i
 
 ### MCP Tools Available
 
-Day AI provides 20+ MCP tools. Key ones:
+Tools available via MCP depend on the user's assistant tier (Free → Turbo → Professional → Executive, cumulative).
 
-- `search_objects` / `keyword_search` - Search & query
-- `create_or_update_person_organization` - CRUD for contacts/companies
-- `create_or_update_opportunity` - CRUD for deals
-- `send_notification` - Email/Slack notifications
-- `get_meeting_recording_context` - Meeting transcripts
+**Free (no assistant):** `search_objects`, `create_or_update_person_organization`, `create_or_update_workspace_context`, `get_meeting_recording_context`, `create_meeting_recording_clip`, `get_share_url`, `read_crm_schema`, `activate_skill`, `deactivate_skill`
+
+**Turbo adds:** `create_or_update_action`, `create_or_update_relationship`, `create_or_update_list`, `create_page`, `update_page`, `create_email_draft`, `send_notification_mcp`, `assistant_settings`, `manage_skills`, `whoami`
+
+**Professional adds:** `create_or_update_opportunity`, `create_or_update_custom_property`, `backfill_custom_property`, `analyze_pipeline_metrics`, `create_import_from_file`, `save_import_mapping`, `start_import`, `get_import_progress`, `get_import_errors`, `get_imports_by_object_type`, `analyze_csv`, `read_csv_file`, `read_file`, `transform_csv`, `create_view`, `update_view`, `connect_slack`, `open_email_sharing_rules`, `manage_workspace_members`
+
+**Executive adds:** `batch_create_or_update_opportunities`, `batch_create_or_update_people_organizations`, `search_prospects`
+
+Note: Some tools are internal-only (hidden from MCP): `web_search`, `day_ai_help`, `send_notification` (use `send_notification_mcp` instead), `check_workspace_and_user_settings`, `create_or_update_pipeline_stage`, `delete_contact`, `delete_opportunity`, `delete_organization`, `delete_stage_pipeline`, `open_in_app`, `get_context_for_meeting_recording_citations`
 
 ### Key Search Patterns
 

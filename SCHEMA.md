@@ -624,44 +624,89 @@ Many relationships are bidirectional. Here are common inverse lookups:
 
 This section documents the input schema for each MCP tool available through Day AI.
 
+## Tool Availability by Tier
+
+Tools available via MCP depend on the user's assistant tier. Higher tiers include all tools from lower tiers.
+
+| Tier | Tools Added |
+|------|-------------|
+| **Free** | `search_objects`, `create_or_update_person_organization`, `create_or_update_workspace_context`, `get_meeting_recording_context`, `create_meeting_recording_clip`, `get_share_url`, `read_crm_schema`, `activate_skill`, `deactivate_skill` |
+| **Turbo** | `create_or_update_action`, `create_or_update_relationship`, `create_or_update_list`, `create_page`, `update_page`, `create_email_draft`, `send_notification_mcp`, `assistant_settings`, `manage_skills`, `whoami` |
+| **Professional** | `create_or_update_opportunity`, `create_or_update_custom_property`, `backfill_custom_property`, `analyze_pipeline_metrics`, `create_import_from_file`, `save_import_mapping`, `start_import`, `get_import_progress`, `get_import_errors`, `get_imports_by_object_type`, `analyze_csv`, `read_csv_file`, `read_file`, `transform_csv`, `create_view`, `update_view`, `connect_slack`, `open_email_sharing_rules`, `manage_workspace_members` |
+| **Executive** | `batch_create_or_update_opportunities`, `batch_create_or_update_people_organizations`, `search_prospects` |
+
+> **Note:** Some tools exist in the platform but are hidden from MCP (internal use only): `web_search`, `day_ai_help`, `send_notification`, `check_workspace_and_user_settings`, `create_or_update_pipeline_stage`, `delete_contact`, `delete_opportunity`, `delete_organization`, `delete_stage_pipeline`, `open_in_app`, `get_context_for_meeting_recording_citations`.
+
 ## Table of Contents
 
 ### Search & Query Tools
 - [search_objects](#search_objects) - Primary tool for finding objects with property and relationship filtering
-- [keyword_search](#keyword_search)
 
 ### CRM Object Management
 - [create_or_update_person_organization](#create_or_update_person_organization)
 - [create_or_update_opportunity](#create_or_update_opportunity)
-- [create_or_update_pipeline_stage](#create_or_update_pipeline_stage)
-- [update_object](#update_object)
-- [analyze_before_create_or_update](#analyze_before_create_or_update)
+- [create_or_update_relationship](#create_or_update_relationship)
+- [create_or_update_custom_property](#create_or_update_custom_property)
 
 ### Content Creation & Management
 - [create_page](#create_page)
 - [update_page](#update_page)
 - [create_email_draft](#create_email_draft)
-- [send_email](#send_email)
 - [create_or_update_workspace_context](#create_or_update_workspace_context)
 
 ### Actions & Tasks
 - [create_or_update_action](#create_or_update_action)
 
+### Lists
+- [create_or_update_list](#create_or_update_list)
+
 ### Views & Visualization
 - [create_view](#create_view)
-- [create_chart](#create_chart)
+- [update_view](#update_view)
 
 ### Meeting & Recording Tools
 - [get_meeting_recording_context](#get_meeting_recording_context)
 - [create_meeting_recording_clip](#create_meeting_recording_clip)
 
 ### Notifications & Communication
-- [send_notification](#send_notification)
+- [send_notification_mcp](#send_notification_mcp) - Send notifications via email or Slack (MCP version)
+
+### Import Tools
+- [create_import_from_file](#create_import_from_file)
+- [save_import_mapping](#save_import_mapping)
+- [start_import](#start_import)
+- [get_import_progress](#get_import_progress)
+- [get_import_errors](#get_import_errors)
+- [get_imports_by_object_type](#get_imports_by_object_type)
+
+### Data & Analysis
+- [analyze_csv](#analyze_csv)
+- [read_csv_file](#read_csv_file)
+- [read_file](#read_file)
+- [transform_csv](#transform_csv)
+- [analyze_pipeline_metrics](#analyze_pipeline_metrics)
+- [backfill_custom_property](#backfill_custom_property)
+
+### Batch Operations
+- [batch_create_or_update_opportunities](#batch_create_or_update_opportunities)
+- [batch_create_or_update_people_organizations](#batch_create_or_update_people_organizations)
+
+### Prospecting
+- [search_prospects](#search_prospects)
 
 ### Utility Tools
-- [web_search](#web_search)
 - [get_share_url](#get_share_url)
-- [create_custom_property](#create_custom_property)
+- [read_crm_schema](#read_crm_schema)
+- [whoami](#whoami)
+
+### Workspace & Settings
+- [assistant_settings](#assistant_settings)
+- [manage_skills](#manage_skills)
+- [activate_skill](#activate_skill)
+- [deactivate_skill](#deactivate_skill)
+- [manage_workspace_members](#manage_workspace_members)
+- [connect_slack](#connect_slack)
+- [open_email_sharing_rules](#open_email_sharing_rules)
 
 ---
 
@@ -867,26 +912,6 @@ The `where` field supports two types of conditions:
 
 ---
 
-## keyword_search
-
-Perform keyword-based searches across CRM objects.
-
-### Input Schema
-
-```typescript
-{
-  searchOperations: Array<{
-    objectType: "native_contact" | "native_organization" | "native_opportunity" |
-                "native_pipeline" | "native_meetingrecording" | "native_page";
-    keywords: string[]; // Keywords that should ALL be found. Use ["EMPTY"] to search all
-    limit?: number; // 1-50, default: 10
-    searchIntent?: "find_specific" | "explore_many"; // default: 'find_specific'
-  }>;
-}
-```
-
----
-
 ## create_or_update_person_organization
 
 Create or update Person and Organization objects in the CRM.
@@ -957,74 +982,6 @@ Create or update Opportunity objects.
 
 ---
 
-## create_or_update_pipeline_stage
-
-Create or update Pipeline and Stage objects.
-
-### Input Schema
-
-```typescript
-{
-  objectType: 'Pipeline' | 'Stage';
-  objectId?: string; // For updates
-  propertyUpdates: Array<{
-    propertyId: string;
-    value: any;
-    reasoning?: string;
-    source?: string;
-  }>;
-}
-```
-
-When creating a pipeline, include a `stages` property:
-
-```typescript
-{
-  propertyId: "stages",
-  value: Array<{
-    title: string;
-    type: 'AWARENESS' | 'CONNECTION' | 'NEEDS_IDENTIFICATION' | 'EVALUATION' |
-          'CONSIDERATION_NEGOTIATION' | 'CLOSED_WON' | 'CLOSED_LOST';
-    description?: string;
-    entranceCriteria: string[]; // 2-4 observable criteria
-  }>
-}
-```
-
----
-
-## update_object
-
-Update properties or add notes to existing CRM objects.
-
-### Input Schema
-
-```typescript
-{
-  objectId: string; // Required
-  objectType: NativeObjectType;
-  updateDescription: string; // Description of the requested update
-}
-```
-
----
-
-## analyze_before_create_or_update
-
-Analyze available properties before creating or updating CRM objects.
-
-### Input Schema
-
-```typescript
-{
-  objectType: NativeObjectType;
-  objectId?: string; // For updates
-  contextString: string; // Information about the object
-}
-```
-
----
-
 ## create_page
 
 Create a new page with formatted content.
@@ -1078,20 +1035,6 @@ Create an email draft for later sending.
   subject: string; // Required
   htmlBody: string; // Required
   inReplyTo?: string; // Thread ID for replies
-}
-```
-
----
-
-## send_email
-
-Send a previously created email draft.
-
-### Input Schema
-
-```typescript
-{
-  draftId: string; // ID from create_email_draft
 }
 ```
 
@@ -1180,55 +1123,6 @@ Create custom views for CRM data with filters and sorting.
 
 ---
 
-## create_chart
-
-Create data visualization charts.
-
-### Input Schema
-
-```typescript
-{
-  chartType: 'bar' | 'line' | 'pie' | 'scatter' | 'area';
-  title: string;
-  description?: string;
-  data: {
-    series: Array<{
-      data: number[];
-      label: string;
-      id?: string;
-      stack?: string;
-      color?: string;
-    }>;
-    xAxis?: {
-      data?: string[];
-      label?: string;
-      scaleType?: 'band' | 'linear' | 'log' | 'point' | 'pow' | 'sqrt' | 'time';
-      min?: number;
-      max?: number;
-    };
-    yAxis?: {
-      label?: string;
-      scaleType?: 'band' | 'linear' | 'log' | 'point' | 'pow' | 'sqrt' | 'time';
-      min?: number;
-      max?: number;
-    };
-  };
-  config?: {
-    width?: number;
-    height?: number;
-    colors?: string[];
-    colorScheme?: 'default' | 'monochrome' | 'complementary' | 'analogous' |
-                  'triadic' | 'warm' | 'cool' | 'pastel' | 'vibrant';
-    showLegend?: boolean;
-    stacked?: boolean;
-    showGrid?: boolean;
-    margin?: { top?: number; right?: number; bottom?: number; left?: number; };
-  };
-}
-```
-
----
-
 ## get_meeting_recording_context
 
 Get context from meeting recordings including transcript and summary.
@@ -1262,9 +1156,9 @@ Create a clip from a meeting recording.
 
 ---
 
-## send_notification
+## send_notification_mcp
 
-Send notifications via email or Slack.
+Send notifications via email or Slack. This is the MCP-exposed version of the notification tool.
 
 ### Input Schema
 
@@ -1273,25 +1167,10 @@ Send notifications via email or Slack.
   channel: 'email' | 'slack' | 'both';
   emailSubject?: string; // Required for email
   emailBody?: string; // Required for email, HTML format
-  slackParagraphs?: string[]; // Required for Slack
+  slackFormatting?: 'plain_text' | 'mrkdwn'; // Slack text formatting
+  slackParagraphs?: string[]; // Required for Slack, max 40 paragraphs
   reasoning: string; // Why sending this notification
-  sendAt?: string; // ISO datetime for scheduling
-}
-```
-
----
-
-## web_search
-
-Search the web for information.
-
-### Input Schema
-
-```typescript
-{
-  userAnswer: string; // Search query
-  otherImportantDetails: string; // Additional context
-  howDeep: 'VERY_DEEP' | 'MEDIUM' | 'BASIC';
+  slackChannelId?: string; // Day.ai ID of Slack channel (optional, defaults to DM)
 }
 ```
 
@@ -1314,9 +1193,9 @@ Get a shareable URL for a CRM object.
 
 ---
 
-## create_custom_property
+## create_or_update_custom_property
 
-Create custom properties for people, organizations, or opportunities.
+Create or update custom properties for people, organizations, or opportunities.
 
 ### Input Schema
 
