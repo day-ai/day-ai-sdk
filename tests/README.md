@@ -12,8 +12,7 @@ tests/
 ├── runner.ts                          # Test execution engine
 └── tools/                             # Tool test cases
     ├── search-objects.ts              # 5 tests for search_objects
-    ├── read-crm-schema.ts             # 3 tests for read_crm_schema
-    └── get-context-for-objects.ts     # 1 test for get_context_for_objects
+    └── read-crm-schema.ts             # 3 tests for read_crm_schema
 ```
 
 ## How Tests Work
@@ -263,9 +262,8 @@ $ yarn test
    Workspace: Day AI
 ✅ MCP initialized
 
-📋 Found 3 test files
+📋 Found 2 test files
 
-Running: get_context_for_objects - Basic Test... ✅ (439ms)
 Running: read_crm_schema - Contact Schema... ✅ (233ms)
 Running: read_crm_schema - Organization Schema... ✅ (226ms)
 Running: search_objects - Search Contacts... ✅ (3337ms)
@@ -275,9 +273,9 @@ Running: search_objects - Pagination Info... ✅ (3317ms)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 Test Summary
 
-  ✅ Passed: 11
-  📦 Total:  11
-  ⏱️  Time:   18558ms
+  ✅ Passed: 10
+  📦 Total:  10
+  ⏱️  Time:   18119ms
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

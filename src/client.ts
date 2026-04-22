@@ -5,7 +5,6 @@ import type {
   SearchOptions,
   SearchQuery,
   SearchResponse,
-  KeywordSearchQuery,
   CreatePersonInput,
   CreateOrganizationInput,
   CreateOpportunityInput,
@@ -451,16 +450,6 @@ export class DayAIClient {
         },
       ],
     });
-  }
-
-  /**
-   * Keyword search across object types.
-   */
-  async keywordSearch(searches: KeywordSearchQuery[]): Promise<any> {
-    const raw = await this.mcpCallTool('keyword_search', {
-      searchOperations: searches,
-    });
-    return this.parseMcpResult(raw);
   }
 
   /**

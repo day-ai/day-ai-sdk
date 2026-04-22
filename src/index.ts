@@ -21,7 +21,6 @@ export type {
   SearchResultRelationship,
   SearchResultSet,
   SearchResponse,
-  KeywordSearchQuery,
   CreatePersonInput,
   CreateOrganizationInput,
   CreateOpportunityInput,

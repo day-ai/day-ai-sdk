@@ -67,7 +67,6 @@ Tools the app provides to the AI agent for working with local data:
 ### C. Identify Day AI MCP Tools to Use
 Which Day AI tools will enhance the app?
 - `search_objects` - Find people, orgs, opportunities
-- `get_context_for_objects` - Get full CRM context
 - `get_meeting_recording_context` - Access meeting transcripts
 - `create_or_update_person_organization` - Enrich CRM
 - `send_notification` - Email/Slack notifications

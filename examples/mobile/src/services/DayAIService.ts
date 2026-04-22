@@ -248,26 +248,6 @@ export class DayAIService {
         return summary.join(', ') || 'Results retrieved';
       }
 
-      // Handle keyword_search results
-      if (toolName === 'keyword_search') {
-        const resultKeys = Object.keys(result).filter(k => k.startsWith('native_'));
-        if (resultKeys.length === 0) return 'No results found';
-
-        const summary: string[] = [];
-        for (const key of resultKeys) {
-          const data = result[key];
-          if (data?.results && Array.isArray(data.results)) {
-            summary.push(`${data.results.length} ${key.replace('native_', '')}(s)`);
-          }
-        }
-        return summary.join(', ') || 'Results retrieved';
-      }
-
-      // Handle get_context_for_objects
-      if (toolName === 'get_context_for_objects') {
-        return 'Context retrieved';
-      }
-
       // Handle create/update operations
       if (toolName.includes('create') || toolName.includes('update')) {
         return 'Operation completed successfully';

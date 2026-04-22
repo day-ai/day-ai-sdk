@@ -120,8 +120,6 @@ To enable CRM access via MCP tools, connect to Day AI:
 
 **What You Get**: Access to 20+ MCP tools including:
 - `search_objects` - Search contacts, organizations, opportunities
-- `keyword_search` - Keyword-based CRM search
-- `get_context_for_objects` - Detailed object context
 - `get_meeting_recording_context` - Meeting transcripts
 - And many more (see [SCHEMA.md](../../SCHEMA.md))
 

@@ -630,7 +630,7 @@ Tools available via MCP depend on the user's assistant tier. Higher tiers includ
 
 | Tier | Tools Added |
 |------|-------------|
-| **Free** | `search_objects`, `create_or_update_person_organization`, `create_or_update_workspace_context`, `get_meeting_recording_context`, `create_meeting_recording_clip`, `get_share_url`, `read_crm_schema`, `activate_skill`, `deactivate_skill` |
+| **Free** | `search_objects`, `create_or_update_person_organization`, `create_or_update_workspace_context`, `get_meeting_recording_context`, `create_meeting_recording_clip`, `get_share_url`, `read_crm_schema`, `read_page`, `activate_skill`, `deactivate_skill` |
 | **Turbo** | `create_or_update_action`, `create_or_update_relationship`, `create_or_update_list`, `create_page`, `update_page`, `create_email_draft`, `send_notification_mcp`, `assistant_settings`, `manage_skills`, `whoami` |
 | **Professional** | `create_or_update_opportunity`, `create_or_update_custom_property`, `backfill_custom_property`, `analyze_pipeline_metrics`, `create_import_from_file`, `save_import_mapping`, `start_import`, `get_import_progress`, `get_import_errors`, `get_imports_by_object_type`, `analyze_csv`, `read_csv_file`, `read_file`, `transform_csv`, `create_view`, `update_view`, `connect_slack`, `open_email_sharing_rules`, `manage_workspace_members` |
 | **Executive** | `batch_create_or_update_opportunities`, `batch_create_or_update_people_organizations`, `search_prospects` |
@@ -651,6 +651,7 @@ Tools available via MCP depend on the user's assistant tier. Higher tiers includ
 ### Content Creation & Management
 - [create_page](#create_page)
 - [update_page](#update_page)
+- [read_page](#read_page) - Read large pages with cursor-based pagination
 - [create_email_draft](#create_email_draft)
 - [create_or_update_workspace_context](#create_or_update_workspace_context)
 
@@ -1021,20 +1022,47 @@ Update an existing page's content or sharing status.
 
 ---
 
-## create_email_draft
+## read_page
 
-Create an email draft for later sending.
+Read a large page by object ID with cursor-based pagination. Returns paginated HTML chunks so you can safely read long documents without pulling the entire content into one response.
+
+For normal-sized pages, `search_objects` with `propertiesToReturn: ['contentHtml']` is simpler. Use `read_page` when you already have the page ID and the content may be large.
 
 ### Input Schema
 
 ```typescript
 {
-  to: string[]; // Required
-  cc?: string[];
-  bcc?: string[];
-  subject: string; // Required
-  htmlBody: string; // Required
-  inReplyTo?: string; // Thread ID for replies
+  objectId: string; // The Day.ai object ID of the page to read
+  cursor?: string; // Opaque pagination cursor from a previous response. Omit on first call.
+  maxChars?: number; // Max HTML characters per chunk (1000–200000). Optional override for smaller chunks.
+}
+```
+
+### Pagination
+
+Use `nextCursor` from the response as `cursor` in the next call. Continue while `hasMore` is `true`.
+
+---
+
+## create_email_draft
+
+Create or update an email draft.
+
+### Input Schema
+
+```typescript
+{
+  description: string; // Purpose of the draft, e.g. "Follow up with Sarah about contract terms"
+  draftId?: string; // ID of existing draft to update (from prior create or search_objects)
+  to?: string[]; // Recipient email addresses (replaces all when updating)
+  cc?: string[]; // CC recipients (replaces all when updating)
+  bcc?: string[]; // BCC recipients (replaces all when updating)
+  from?: string; // Sender email (must be associated with the user)
+  subject?: string; // Email subject
+  body?: string; // HTML body (replaces entire body when updating)
+  threadObjectId?: string; // Day.ai object ID of a Gmail thread to reply to
+  replyAll?: boolean; // Reply-all behavior when replying to a thread
+  actionId?: string; // Action ID to associate with the draft (create only)
 }
 ```
 
@@ -1125,16 +1153,27 @@ Create custom views for CRM data with filters and sorting.
 
 ## get_meeting_recording_context
 
-Get context from meeting recordings including transcript and summary.
+Get context from meeting recordings including transcript and summary. Returns up to ~20k tokens at a time.
+
+By default, returns metadata (title, date, participants) and VTT transcript with token-based pagination. When `fullTranscript` is true, returns the raw JSON transcript in sentence-based format (speaker, timestamps, email, utterance) with cursor-based pagination.
 
 ### Input Schema
 
 ```typescript
 {
   meetingRecordingId: string;
-  tokenOffset?: number; // For pagination, default: 0
+  tokenOffset?: number; // For token-based pagination (default mode), default: 0
+  fullTranscript?: boolean; // When true, return raw JSON transcript with cursor pagination (default: false)
+  cursor?: string; // Opaque pagination cursor for fullTranscript mode. Use nextCursor from previous response.
 }
 ```
+
+### Pagination
+
+- **Default mode** (`fullTranscript: false`): Use `nextTokenOffset` from the response as `tokenOffset` in the next call.
+- **Full transcript mode** (`fullTranscript: true`): Use `nextCursor` from the response as `cursor` in the next call.
+
+In both modes, continue paginating while `hasMore` is `true`.
 
 ---
 
@@ -1226,6 +1265,7 @@ When searching for CRM objects, large result sets are automatically paginated.
 - Pagination applies at the **top level** of the response
 - Results paginate when they exceed the 20,000 token limit
 - Use `nextOffset` from the response for the next page
+- Results are no longer capped — keep paginating while `hasMore` is `true` to retrieve all matching objects
 
 ## Response Fields
 

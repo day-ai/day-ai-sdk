@@ -100,14 +100,6 @@ export interface SearchResponse {
   nextOffset?: number;
 }
 
-// Keyword search types
-export interface KeywordSearchQuery {
-  objectType: 'native_contact' | 'native_organization' | 'native_opportunity' | 'native_pipeline' | 'native_meetingrecording' | 'native_page';
-  keywords: string[];
-  limit?: number;
-  searchIntent?: 'find_specific' | 'explore_many';
-}
-
 // Convenience method input types
 export interface CreatePersonInput {
   email: string;

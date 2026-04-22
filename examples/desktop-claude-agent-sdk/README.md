@@ -53,9 +53,8 @@ User: "Update this note with context about John Smith from my last meeting"
 
 AI Agent:
 1. Uses Day AI's `search_objects` tool to find John Smith
-2. Uses Day AI's `get_context_for_objects` to get full context
-3. Uses Day AI's `get_meeting_recording_context` to find recent meetings
-4. Uses local `update_note` tool to write the summary to the note
+2. Uses Day AI's `get_meeting_recording_context` to find recent meetings
+3. Uses local `update_note` tool to write the summary to the note
 ```
 
 ## Quick Start
@@ -153,7 +152,6 @@ When connected to Day AI, additional tools become available:
 | Tool | Description |
 |------|-------------|
 | `search_objects` | Search for People, Organizations, Opportunities |
-| `get_context_for_objects` | Get rich context for CRM objects |
 | `get_meeting_recording_context` | Get transcripts and summaries from meetings |
 | `create_or_update_person_organization` | Create/update CRM records |
 | `create_email_draft` | Draft an email |

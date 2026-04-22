@@ -161,6 +161,7 @@ Which tools you see depends on your assistant tier. Tools are cumulative — hig
 | **Search** | `search_objects` |
 | **CRM** | `create_or_update_person_organization`, `create_or_update_workspace_context` |
 | **Meetings** | `get_meeting_recording_context`, `create_meeting_recording_clip` |
+| **Content** | `read_page` |
 | **Schema** | `read_crm_schema` |
 | **Utility** | `get_share_url` |
 | **Skills** | `activate_skill`, `deactivate_skill` |
