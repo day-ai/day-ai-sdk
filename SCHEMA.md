@@ -637,6 +637,31 @@ Tools available via MCP depend on the user's assistant tier. Higher tiers includ
 
 > **Note:** Some tools exist in the platform but are hidden from MCP (internal use only): `web_search`, `day_ai_help`, `send_notification`, `check_workspace_and_user_settings`, `create_or_update_pipeline_stage`, `delete_contact`, `delete_opportunity`, `delete_organization`, `delete_stage_pipeline`, `open_in_app`, `get_context_for_meeting_recording_citations`.
 
+## Agent Template Slugs
+
+Agent templates are one-time starter roles for new agents. A template seeds the agent's title, human-facing description, and personality/instructions during creation or activation; it is not stored as an agent type after creation.
+
+| Tier | Slug | Display name |
+|------|------|--------------|
+| Turbo | `sales-assistant` | Sales Assistant |
+| Turbo | `meeting-notetaker` | Meeting Notetaker |
+| Turbo | `user-researcher` | User Researcher |
+| Professional | `bdr` | Business Development Representative |
+| Professional | `account-executive` | Account Executive |
+| Professional | `sales-operator` | Sales Operator |
+| Professional | `crm-data-entry-specialist` | CRM Data Entry Specialist |
+| Professional | `sales-coach` | Sales Coach |
+| Professional | `marketing-director` | Marketing Director |
+| Executive | `lead-analyst` | Lead Analyst |
+| Executive | `gtm-strategist` | GTM Strategist |
+| Executive | `senior-product-manager` | Senior Product Manager |
+
+Gated Super Agent templates also exist: `revenue-operations-manager` (Revenue Operations Manager) and `demand-generation-manager` (Demand Generation Manager). Only show or use these when the Super Agent SKU gate is enabled.
+
+If a tool or API field documents `agentTemplateSlug`, use one of the stable slugs above. Omit the field or pass `null` for a custom agent. Template-specific authorizations should use a slug from the selected tier; if the authorization tier changes before activation, the prior slug should be cleared and treated as custom.
+
+The MCP `manage_workspace_members` input schema does not currently include `agentTemplateSlug`; do not send template slugs to that tool unless a future schema revision adds the field.
+
 ## Table of Contents
 
 ### Search & Query Tools

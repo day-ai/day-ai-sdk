@@ -200,6 +200,35 @@ See [SCHEMA.md](SCHEMA.md) for complete tool documentation, input schemas, and o
 
 ---
 
+## Agent Template Slugs
+
+Day AI agent templates are starter roles used when creating or granting a new agent. A template seeds the agent's title, human-facing description, and personality/instructions at creation time. It is not a permanent agent type; after creation, the agent is just an agent whose fields can be edited.
+
+Standard public template slugs:
+
+| Tier | Slug | Display name |
+|------|------|--------------|
+| Turbo | `sales-assistant` | Sales Assistant |
+| Turbo | `meeting-notetaker` | Meeting Notetaker |
+| Turbo | `user-researcher` | User Researcher |
+| Professional | `bdr` | Business Development Representative |
+| Professional | `account-executive` | Account Executive |
+| Professional | `sales-operator` | Sales Operator |
+| Professional | `crm-data-entry-specialist` | CRM Data Entry Specialist |
+| Professional | `sales-coach` | Sales Coach |
+| Professional | `marketing-director` | Marketing Director |
+| Executive | `lead-analyst` | Lead Analyst |
+| Executive | `gtm-strategist` | GTM Strategist |
+| Executive | `senior-product-manager` | Senior Product Manager |
+
+Gated Super Agent templates also exist: `revenue-operations-manager` (Revenue Operations Manager) and `demand-generation-manager` (Demand Generation Manager). Only show or use these when the Super Agent SKU gate is enabled.
+
+When a provisioning surface accepts `agentTemplateSlug`, pass one of these stable slugs to seed the new agent, or omit it/use `null` for a custom agent. Template-specific authorizations should use a template from the selected tier. If a tier is changed before activation, treat any previous template choice as invalid and fall back to a generic/custom agent for the new tier.
+
+The public MCP `manage_workspace_members` tool does not currently accept `agentTemplateSlug`. Use Day AI's product/admin agent creation flow for template-specific invites until the MCP schema explicitly exposes that field.
+
+---
+
 ## Configuration
 
 | Variable | Description | Default |

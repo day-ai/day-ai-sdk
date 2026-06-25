@@ -166,6 +166,18 @@ Tools available via MCP depend on the user's assistant tier (Free → Turbo → 
 
 Note: Some tools are internal-only (hidden from MCP): `web_search`, `day_ai_help`, `send_notification` (use `send_notification_mcp` instead), `check_workspace_and_user_settings`, `create_or_update_pipeline_stage`, `delete_contact`, `delete_opportunity`, `delete_organization`, `delete_stage_pipeline`, `open_in_app`, `get_context_for_meeting_recording_citations`
 
+### Agent Template Slugs
+
+Day AI templates seed new agents at creation/activation time; they do not become a permanent agent type. Standard public slugs are:
+
+- Turbo: `sales-assistant`, `meeting-notetaker`, `user-researcher`
+- Professional: `bdr`, `account-executive`, `sales-operator`, `crm-data-entry-specialist`, `sales-coach`, `marketing-director`
+- Executive: `lead-analyst`, `gtm-strategist`, `senior-product-manager`
+
+Gated Super Agent slugs are `revenue-operations-manager` and `demand-generation-manager`. Only show or use them when the Super Agent SKU gate is enabled.
+
+Use these only when an API/tool explicitly accepts `agentTemplateSlug`; omit or use `null` for a custom agent. The current MCP `manage_workspace_members` schema does not accept template slugs, so do not invent that argument.
+
 ### Key Search Patterns
 
 **Find meetings by attendee (relationship search):**
