@@ -9,7 +9,18 @@ import type {
   CreateOrganizationInput,
   CreateOpportunityInput,
   SendNotificationInput,
+  CreatePageInput,
+  CreatePageResult,
+  UpdatePageInput,
+  ReadPageResult,
+  PageImageMimeType,
+  PageImageUploadTarget,
+  PageImageAttachment,
+  UploadPageImageOptions,
+  AddImageToPageOptions,
 } from "./types";
+
+import { escapeHtmlAttribute } from "./pageImages";
 
 // Load environment variables
 dotenv.config();
@@ -499,6 +510,191 @@ export class DayAIClient {
   async sendNotification(input: SendNotificationInput): Promise<any> {
     const raw = await this.mcpCallTool('send_notification_mcp', input);
     return this.parseMcpResult(raw);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pages
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Create a new page with HTML content.
+   * Returns the created page's id in result.page.id.
+   */
+  async createPage(input: CreatePageInput): Promise<CreatePageResult> {
+    const raw = await this.mcpCallTool('create_page', input);
+    return this.parseMcpResult<CreatePageResult>(raw);
+  }
+
+  /**
+   * Update an existing page. For a full content replace without knowing the
+   * current content, pass pageHtmlContent with refreshFirst: true.
+   */
+  async updatePage(input: UpdatePageInput): Promise<any> {
+    const { pageId, ...rest } = input;
+    const raw = await this.mcpCallTool('update_page', {
+      objectId: pageId,
+      ...rest,
+    });
+    return this.parseMcpResult(raw);
+  }
+
+  /**
+   * Read one chunk of a page's HTML content (cursor-paginated).
+   */
+  async readPage(
+    pageId: string,
+    options?: { cursor?: string; maxChars?: number },
+  ): Promise<ReadPageResult> {
+    const raw = await this.mcpCallTool('read_page', {
+      objectId: pageId,
+      ...(options?.cursor ? { cursor: options.cursor } : {}),
+      ...(options?.maxChars ? { maxChars: options.maxChars } : {}),
+    });
+    return this.parseMcpResult<ReadPageResult>(raw);
+  }
+
+  /**
+   * Read a page's complete HTML content, following pagination cursors.
+   */
+  async readPageFullHtml(
+    pageId: string,
+  ): Promise<{ title: string; contentHtml: string }> {
+    let contentHtml = '';
+    let title = '';
+    let cursor: string | undefined;
+
+    while (true) {
+      const chunk = await this.readPage(pageId, cursor ? { cursor } : undefined);
+      title = chunk.title ?? title;
+      contentHtml += chunk.contentHtml ?? '';
+      if (!chunk.hasMore || !chunk.nextCursor) {
+        break;
+      }
+      cursor = chunk.nextCursor;
+    }
+
+    return { title, contentHtml };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Page images
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Step 1 of the image upload flow: get a pre-signed S3 PUT URL for a page
+   * image. The URL expires in ~120 seconds. Prefer uploadPageImage(), which
+   * runs the whole flow.
+   */
+  async getPageImageUploadUrl(
+    pageId: string,
+    mimeType: PageImageMimeType,
+  ): Promise<PageImageUploadTarget> {
+    const raw = await this.mcpCallTool('get_page_image_upload_url', {
+      objectId: pageId,
+      mimeType,
+    });
+    return this.parseMcpResult<PageImageUploadTarget>(raw);
+  }
+
+  /**
+   * Step 2 of the image upload flow: register uploaded bytes as an image
+   * attached to the page. Returns imageHtml to embed in the page content.
+   */
+  async attachPageImage(input: {
+    pageId: string;
+    blobId: string;
+    filename: string;
+  }): Promise<PageImageAttachment> {
+    const { pageId, ...rest } = input;
+    const raw = await this.mcpCallTool('attach_page_image', {
+      objectId: pageId,
+      ...rest,
+    });
+    return this.parseMcpResult<PageImageAttachment>(raw);
+  }
+
+  /**
+   * Upload an image and attach it to a page in one call:
+   * get_page_image_upload_url → PUT bytes to S3 → attach_page_image.
+   *
+   * The returned attachment's imageHtml must still be embedded in the page's
+   * HTML content (via updatePage) to make the image visible — or use
+   * addImageToPage() to do both.
+   */
+  async uploadPageImage(
+    pageId: string,
+    image: Buffer | Uint8Array,
+    options: UploadPageImageOptions,
+  ): Promise<PageImageAttachment> {
+    const { mimeType, filename } = options;
+
+    let target = await this.getPageImageUploadUrl(pageId, mimeType);
+
+    if (image.byteLength > target.maxSizeBytes) {
+      throw new Error(
+        `Image is ${image.byteLength} bytes, exceeding the ${target.maxSizeBytes} byte limit for ${mimeType}`,
+      );
+    }
+
+    const putImage = (uploadUrl: string) =>
+      fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimeType },
+        body: image,
+      });
+
+    let uploadResponse = await putImage(target.uploadUrl);
+
+    // The pre-signed URL expires after ~120s; retry once with a fresh URL.
+    if (uploadResponse.status === 403) {
+      target = await this.getPageImageUploadUrl(pageId, mimeType);
+      uploadResponse = await putImage(target.uploadUrl);
+    }
+
+    if (!uploadResponse.ok) {
+      const body = await uploadResponse.text().catch(() => '');
+      throw new Error(
+        `Image upload failed: HTTP ${uploadResponse.status} ${uploadResponse.statusText}${body ? `\n${body}` : ''}`,
+      );
+    }
+
+    return this.attachPageImage({
+      pageId,
+      blobId: target.blobId,
+      filename,
+    });
+  }
+
+  /**
+   * Upload an image and append it to the end of a page's content, with an
+   * optional caption. Convenience wrapper over uploadPageImage +
+   * readPageFullHtml + updatePage.
+   *
+   * Note: this is a read-then-full-replace, so edits made to the page by
+   * someone else between the read and the update are overwritten. Fine for
+   * agent-authored pages; for pages humans edit concurrently, use
+   * updatePage with oldContentMatch for optimistic concurrency.
+   */
+  async addImageToPage(
+    pageId: string,
+    image: Buffer | Uint8Array,
+    options: AddImageToPageOptions,
+  ): Promise<PageImageAttachment> {
+    const { caption, ...uploadOptions } = options;
+    const attachment = await this.uploadPageImage(pageId, image, uploadOptions);
+
+    const { contentHtml } = await this.readPageFullHtml(pageId);
+    const captionHtml = caption
+      ? `<p>${escapeHtmlAttribute(caption)}</p>`
+      : '';
+
+    await this.updatePage({
+      pageId,
+      pageHtmlContent: `${contentHtml}${attachment.imageHtml}${captionHtml}`,
+      refreshFirst: true,
+    });
+
+    return attachment;
   }
 
 }
