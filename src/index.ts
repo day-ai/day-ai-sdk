@@ -38,7 +38,7 @@ export type {
 
 export {
   buildPageImageHtml,
-  escapeHtmlAttribute,
+  escapeHtml,
   PAGE_IMAGE_FILE_ID_ATTR,
   PAGE_IMAGE_STABLE_SRC_PREFIX,
 } from './pageImages';

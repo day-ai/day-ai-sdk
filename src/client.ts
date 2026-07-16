@@ -20,7 +20,7 @@ import type {
   AddImageToPageOptions,
 } from "./types";
 
-import { escapeHtmlAttribute } from "./pageImages";
+import { escapeHtml } from "./pageImages";
 
 // Load environment variables
 dotenv.config();
@@ -685,7 +685,7 @@ export class DayAIClient {
 
     const { contentHtml } = await this.readPageFullHtml(pageId);
     const captionHtml = caption
-      ? `<p>${escapeHtmlAttribute(caption)}</p>`
+      ? `<p>${escapeHtml(caption)}</p>`
       : '';
 
     await this.updatePage({
