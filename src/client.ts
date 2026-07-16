@@ -582,8 +582,8 @@ export class DayAIClient {
 
   /**
    * Step 1 of the image upload flow: get a pre-signed S3 PUT URL for a page
-   * image. The URL expires in ~120 seconds. Prefer uploadPageImage(), which
-   * runs the whole flow.
+   * image. The URL expires quickly (see expiresInSeconds in the result), so
+   * upload immediately. Prefer uploadPageImage(), which runs the whole flow.
    */
   async getPageImageUploadUrl(
     pageId: string,
@@ -645,7 +645,7 @@ export class DayAIClient {
 
     let uploadResponse = await putImage(target.uploadUrl);
 
-    // The pre-signed URL expires after ~120s; retry once with a fresh URL.
+    // The pre-signed URL may have expired; retry once with a fresh URL.
     if (uploadResponse.status === 403) {
       target = await this.getPageImageUploadUrl(pageId, mimeType);
       uploadResponse = await putImage(target.uploadUrl);

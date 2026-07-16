@@ -1064,9 +1064,9 @@ Step 1 of 2 for embedding an image in a page. Returns a pre-signed S3 PUT URL fo
 ```typescript
 {
   blobId: string;
-  uploadUrl: string; // Pre-signed S3 PUT URL — expires in 120 seconds
-  maxSizeBytes: number; // 5 MB per image
-  expiresInSeconds: number; // 120
+  uploadUrl: string; // Pre-signed S3 PUT URL — expires in expiresInSeconds, upload immediately
+  maxSizeBytes: number; // Per-image size limit
+  expiresInSeconds: number;
   nextStep: string;
 }
 ```
@@ -1097,7 +1097,7 @@ Step 2 of 2. Registers uploaded bytes as an image attached to the page and retur
   filename: string;
   mimeType: string;
   contentLength: number;
-  previewUrl: string; // Signed link for viewing the image (expires in 24h)
+  previewUrl: string; // Signed, expiring link for viewing the image
   imageHtml: string; // <img> snippet — embed VERBATIM in page HTML via create_page/update_page
   message: string;
 }
@@ -1106,7 +1106,7 @@ Step 2 of 2. Registers uploaded bytes as an image attached to the page and retur
 Notes:
 - An image belongs to exactly one page. Embedding its `imageHtml` in a different page clones the image for that page on save.
 - Images no longer referenced by their page's content are garbage-collected.
-- Per-page limits: 100 images, 100 MB total.
+- Pages enforce per-page limits on image count and total image size; exceeding them returns a tool error.
 
 ---
 

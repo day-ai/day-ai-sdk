@@ -190,7 +190,7 @@ export type PageImageMimeType =
 
 export interface PageImageUploadTarget {
   blobId: string;
-  /** Pre-signed S3 PUT URL. Expires in expiresInSeconds (120s) — upload immediately. */
+  /** Pre-signed S3 PUT URL. Expires in expiresInSeconds — upload immediately. */
   uploadUrl: string;
   maxSizeBytes: number;
   expiresInSeconds: number;
@@ -202,7 +202,7 @@ export interface PageImageAttachment {
   filename: string;
   mimeType: string;
   contentLength: number;
-  /** Signed link for viewing the image directly (expires in 24h). */
+  /** Signed, expiring link for viewing the image directly. */
   previewUrl: string;
   /** <img> snippet to embed verbatim in the page's HTML content. */
   imageHtml: string;
