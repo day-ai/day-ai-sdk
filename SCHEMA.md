@@ -1013,9 +1013,11 @@ Update an existing page's content or sharing status.
 
 ```typescript
 {
-  pageId: string; // Required
+  objectId: string; // Required — the page's object ID
   title?: string;
-  pageHtmlContent?: string;
+  pageHtmlContent?: string; // Full-replace mode; pair with oldContentMatch or refreshFirst
+  oldContentMatch?: string; // Exact substring of current content to replace
+  refreshFirst?: boolean; // Fetch latest content just before updating (full replace without oldContentMatch)
   publishedForUserAt?: string | null; // null to make private
 }
 ```
@@ -1041,6 +1043,70 @@ For normal-sized pages, `search_objects` with `propertiesToReturn: ['contentHtml
 ### Pagination
 
 Use `nextCursor` from the response as `cursor` in the next call. Continue while `hasMore` is `true`.
+
+---
+
+## get_page_image_upload_url
+
+Step 1 of 2 for embedding an image in a page. Returns a pre-signed S3 PUT URL for uploading raw image bytes. The page must already exist (create it with `create_page` first).
+
+### Input Schema
+
+```typescript
+{
+  objectId: string; // Object ID of the existing page the image will be embedded in
+  mimeType: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+}
+```
+
+### Response
+
+```typescript
+{
+  blobId: string;
+  uploadUrl: string; // Pre-signed S3 PUT URL — expires in expiresInSeconds, upload immediately
+  maxSizeBytes: number; // Per-image size limit
+  expiresInSeconds: number;
+  nextStep: string;
+}
+```
+
+HTTP PUT the raw bytes to `uploadUrl` with `Content-Type` set to the same mimeType (do not base64-encode), then call `attach_page_image`.
+
+---
+
+## attach_page_image
+
+Step 2 of 2. Registers uploaded bytes as an image attached to the page and returns the HTML snippet to embed.
+
+### Input Schema
+
+```typescript
+{
+  objectId: string; // Same objectId used in get_page_image_upload_url
+  blobId: string; // From get_page_image_upload_url
+  filename: string; // e.g. "screenshot.png" — used as title and alt text
+}
+```
+
+### Response
+
+```typescript
+{
+  fileId: string;
+  filename: string;
+  mimeType: string;
+  contentLength: number;
+  previewUrl: string; // Signed, expiring link for viewing the image
+  imageHtml: string; // <img> snippet — embed VERBATIM in page HTML via create_page/update_page
+  message: string;
+}
+```
+
+Notes:
+- An image belongs to exactly one page. Embedding its `imageHtml` in a different page clones the image for that page on save.
+- Images no longer referenced by their page's content are garbage-collected.
+- Pages enforce per-page limits on image count and total image size; exceeding them returns a tool error.
 
 ---
 
