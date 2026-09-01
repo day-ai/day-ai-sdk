@@ -72,6 +72,57 @@ export interface McpToolResult {
   isError?: boolean;
 }
 
+/**
+ * Read a JSON-RPC response body, which may arrive as plain JSON or as a
+ * Server-Sent Events stream.
+ *
+ * The Day AI MCP endpoint answers with `text/event-stream` when the client
+ * advertises that it accepts one, emitting `: keepalive` comments while a slow
+ * tool runs so intermediaries do not drop the connection. The SDK issues one
+ * request per call and wants one result, so the whole body is read and the
+ * JSON-RPC message extracted; keepalive comments are discarded.
+ *
+ * This SDK does not currently send an `Accept` header, so responses are plain
+ * JSON today. The SSE branch exists so that adding one — which the MCP spec
+ * requires of clients — cannot silently break every call.
+ */
+export function parseJsonRpcBody(
+  contentType: string | null,
+  body: string,
+  requestId?: string | number | null
+): JsonRpcResponse {
+  if (!contentType?.includes('text/event-stream')) {
+    return JSON.parse(body) as JsonRpcResponse;
+  }
+
+  // SSE frames are separated by a blank line. Within a frame, `data:` lines
+  // carry the payload and a leading `:` marks a comment (our keepalives).
+  const messages = body
+    .split('\n\n')
+    .map((frame) =>
+      frame
+        .split('\n')
+        .filter((line) => line.startsWith('data:'))
+        .map((line) => line.slice('data:'.length).trim())
+        .join('\n')
+    )
+    .filter((payload) => payload.length > 0)
+    .map((payload) => JSON.parse(payload) as JsonRpcResponse);
+
+  if (messages.length === 0) {
+    throw new Error('MCP stream closed without a JSON-RPC message');
+  }
+
+  // A stream may carry more than one message. Prefer the one answering this
+  // request; fall back to the last, which is the result in practice.
+  const answer =
+    requestId === undefined
+      ? undefined
+      : messages.find((message) => message.id === requestId);
+
+  return answer ?? messages[messages.length - 1];
+}
+
 export class DayAIClient {
   private config: DayAIConfig;
   private currentAccessToken: string | null = null;
@@ -283,13 +334,36 @@ export class DayAIClient {
         body: JSON.stringify(jsonRpcRequest),
       });
 
-      const jsonRpcResponse = await response.json() as JsonRpcResponse;
+      // Read the body once, then parse. Parsing before checking `response.ok`
+      // meant a non-JSON error body (an HTML 502 from a proxy, say) threw and
+      // was reported as a parse failure instead of the HTTP status.
+      const rawBody = await response.text();
+
+      let jsonRpcResponse: JsonRpcResponse | undefined;
+      let parseError: string | undefined;
+      try {
+        jsonRpcResponse = parseJsonRpcBody(
+          response.headers.get('content-type'),
+          rawBody,
+          jsonRpcRequest.id
+        );
+      } catch (error) {
+        parseError =
+          error instanceof Error ? error.message : 'Unparseable response body';
+      }
 
       if (!response.ok) {
         return {
           success: false,
           error: `HTTP ${response.status}: ${response.statusText}`,
           data: jsonRpcResponse,
+        };
+      }
+
+      if (!jsonRpcResponse) {
+        return {
+          success: false,
+          error: `Invalid MCP response: ${parseError}`,
         };
       }
 
