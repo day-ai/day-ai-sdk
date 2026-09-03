@@ -81,7 +81,7 @@
 | socialLinkedIn      | Url           | `z.string().url().optional()`         | The LinkedIn profile URL of the person                                                                       |
 | currentCompanyName  | TextArea      | `z.string().optional()`               | The name of the person's current organization.                                                               |
 | currentJobTitle     | TextArea      | `z.string().optional()`               | The job title of the person's current organization.                                                          |
-| currentJobStartDate | DateTime      | `z.string().optional()`               | The start date of the person's current job.                                                                  |
+| currentJobStartDate | Date          | `z.string().optional()`               | The calendar date the person's current job started.                                                          |
 | skills              | TextArea      | `z.array(z.string()).optional()`      | The skills of the person.                                                                                    |
 | languages           | TextArea      | `z.array(z.string()).optional()`      | The languages spoken by the person.                                                                          |
 | interests           | TextArea      | `z.array(z.string()).optional()`      | The interests of the person.                                                                                 |
@@ -197,9 +197,9 @@ z.object({
 | stageId                | Picklist      | `z.string()`                                          | The object reference of the stage this opportunity is in.        |
 | domain                 | TextArea      | `z.string().optional()`                               | The domain associated with the opportunity.                      |
 | roles                  | TextArea      | `z.array(z.object({...})).optional()`                 | The people associated with this opportunity and their roles.     |
-| timeframeStart         | DateTime      | `z.string().datetime().optional()`                    | The start date of the opportunity.                               |
-| timeframeEnd           | DateTime      | `z.string().datetime().optional()`                    | The end date of the opportunity.                                 |
-| expectedCloseDate      | DateTime      | `z.string().datetime().optional()`                    | The expected close date for this opportunity.                    |
+| timeframeStart         | Date          | `z.string().optional()`                               | The calendar date the opportunity started, as YYYY-MM-DD.        |
+| timeframeEnd           | Date          | `z.string().optional()`                               | The calendar date the opportunity ended, as YYYY-MM-DD.          |
+| expectedCloseDate      | Date          | `z.string().optional()`                               | The expected close date for the opportunity, as YYYY-MM-DD.      |
 | expectedRevenue        | Float         | `z.number().positive().optional()`                    | The expected annual recurring revenue.                           |
 | ownerEmail             | Email         | `z.string().email().optional()`                       | The email of the person responsible. MUST be a workspace member. |
 | currentStatus          | TextArea      | `z.string().optional()`                               | The current status of the opportunity.                           |
@@ -265,7 +265,8 @@ z.array(
 | domains           | Email         | `z.array(z.string()).optional()`                   | The domains for whom the action must be completed.               |
 | priority          | Picklist      | `z.enum(Object.values(ActionPriority)).optional()` | The priority of the action.                                      |
 | type              | Picklist      | `z.enum(Object.values(ActionType)).optional()`     | The type of the action.                                          |
-| timeframeEnd      | DateTime      | `z.string().optional()`                            | The due date of the action.                                      |
+| timeframeStart    | Date          | `z.string().optional()`                            | The snooze date of the action, as YYYY-MM-DD.                    |
+| timeframeEnd      | Date          | `z.string().optional()`                            | The due date of the action, as YYYY-MM-DD.                       |
 
 ## MeetingRecording
 
