@@ -142,3 +142,79 @@ export interface SendNotificationInput {
   reasoning: string;
   slackChannelId?: string;
 }
+
+// Pages
+export interface CreatePageInput {
+  title: string;
+  pageHtmlContent: string;
+  publishedForUserAt?: string;
+  isTemplate?: boolean;
+}
+
+export interface CreatePageResult {
+  page?: { id: string; title?: string };
+  focusObject?: {
+    objectId: string;
+    objectType: string;
+    workspaceId: string;
+  };
+  [key: string]: any;
+}
+
+export interface UpdatePageInput {
+  pageId: string;
+  title?: string;
+  pageHtmlContent?: string;
+  /** Exact substring of the current content to replace (targeted edit / full-replace guard). */
+  oldContentMatch?: string;
+  /** Fetch the latest page content immediately before updating (full-replace without oldContentMatch). */
+  refreshFirst?: boolean;
+  publishedForUserAt?: string | null;
+}
+
+export interface ReadPageResult {
+  objectId: string;
+  title: string;
+  contentHtml: string | null;
+  nextCursor: string | null;
+  hasMore: boolean;
+  [key: string]: any;
+}
+
+// Page images
+export type PageImageMimeType =
+  | 'image/png'
+  | 'image/jpeg'
+  | 'image/gif'
+  | 'image/webp';
+
+export interface PageImageUploadTarget {
+  blobId: string;
+  /** Pre-signed S3 PUT URL. Expires in expiresInSeconds — upload immediately. */
+  uploadUrl: string;
+  maxSizeBytes: number;
+  expiresInSeconds: number;
+  nextStep?: string;
+}
+
+export interface PageImageAttachment {
+  fileId: string;
+  filename: string;
+  mimeType: string;
+  contentLength: number;
+  /** Signed, expiring link for viewing the image directly. */
+  previewUrl: string;
+  /** <img> snippet to embed verbatim in the page's HTML content. */
+  imageHtml: string;
+  message?: string;
+}
+
+export interface UploadPageImageOptions {
+  mimeType: PageImageMimeType;
+  filename: string;
+}
+
+export interface AddImageToPageOptions extends UploadPageImageOptions {
+  /** Optional caption paragraph rendered under the image. */
+  caption?: string;
+}

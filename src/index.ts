@@ -25,7 +25,23 @@ export type {
   CreateOrganizationInput,
   CreateOpportunityInput,
   SendNotificationInput,
+  CreatePageInput,
+  CreatePageResult,
+  UpdatePageInput,
+  ReadPageResult,
+  PageImageMimeType,
+  PageImageUploadTarget,
+  PageImageAttachment,
+  UploadPageImageOptions,
+  AddImageToPageOptions,
 } from './types';
+
+export {
+  buildPageImageHtml,
+  escapeHtml,
+  PAGE_IMAGE_FILE_ID_ATTR,
+  PAGE_IMAGE_STABLE_SRC_PREFIX,
+} from './pageImages';
 
 // Re-export the client as default export
 export { DayAIClient as default } from './client';
