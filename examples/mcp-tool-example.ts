@@ -49,7 +49,8 @@ async function main() {
     console.log();
 
     // Example 1: Search for a contact with full properties
-    const emailAddress = "markitecht@gmail.com";
+    // Pass an email to look up: yarn example:mcp jane@acme.com
+    const emailAddress = process.argv[2] ?? 'jane@example.com';
     console.log(`4. Searching for contact: ${emailAddress}...`);
 
     const contactResult = await client.searchObjects(

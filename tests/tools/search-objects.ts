@@ -245,43 +245,34 @@ export const testCase6 = {
   }
 };
 
-// Test Case 7: Search Gmail Threads with Timeframe
+// Test Case 7: Search Email Messages by Recipient and Timeframe
 export const testCase7 = {
-  name: 'search_objects - Search Gmail Threads with Timeframe',
-  description: 'Should filter gmail threads by emails, domains, and timeframe',
+  name: 'search_objects - Search Email Messages by Recipient and Timeframe',
+  description: 'Should filter email messages by a contact email (email types take emails as targets)',
   toolName: 'search_objects',
 
   input: {
     queries: [{
-      objectType: 'native_gmailthread',
+      objectType: 'native_emailmessage',
       where: {
-        AND: [
-          {
-            propertyId: 'allEmails',
-            operator: 'contains',
-            value: 'will@day.ai'
-          },
-          {
-            propertyId: 'allDomains',
-            operator: 'contains',
-            value: 'inngest.com'
-          }
-        ]
+        relationship: 'toRecipient',
+        targetObjectType: 'native_contact',
+        targetObjectId: 'jane@example.com',
+        operator: 'eq'
       }
     }],
-    timeframeStart: '2020-01-01',
-    timeframeEnd: '2025-12-31'
+    timeframeField: 'time',
+    timeframeStart: '2026-01-01'
   },
 
   async validate(result: any) {
     const parsed = parseSearchResults(result);
 
-    if (!parsed.native_gmailthread) {
-      throw new Error('Response missing native_gmailthread data');
+    if (!parsed.native_emailmessage) {
+      throw new Error('Response missing native_emailmessage data');
     }
 
-    const threadData = parsed.native_gmailthread;
-    if (!Array.isArray(threadData.results)) {
+    if (!Array.isArray(parsed.native_emailmessage.results)) {
       throw new Error('Results should be an array');
     }
 

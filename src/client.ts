@@ -5,6 +5,7 @@ import type {
   SearchOptions,
   SearchQuery,
   SearchResponse,
+  SearchResultSet,
   CreatePersonInput,
   CreateOrganizationInput,
   CreateOpportunityInput,
@@ -19,6 +20,7 @@ export interface DayAIConfig {
   clientId: string;
   clientSecret: string;
   refreshToken: string;
+  /** @deprecated Ignored. The workspace is chosen when the user authorizes. */
   workspaceId?: string;
 }
 
@@ -61,6 +63,13 @@ export interface McpTool {
     type: string;
     properties?: Record<string, any>;
     required?: string[];
+  };
+  annotations?: {
+    title?: string;
+    readOnlyHint?: boolean;
+    destructiveHint?: boolean;
+    idempotentHint?: boolean;
+    openWorldHint?: boolean;
   };
 }
 
@@ -128,6 +137,7 @@ export class DayAIClient {
   private currentAccessToken: string | null = null;
   private tokenExpiresAt: number = 0;
   private mcpInitialized: boolean = false;
+  private readOnlyTools: Set<string> | null = null;
 
   constructor(config?: Partial<DayAIConfig>) {
     // Load from environment variables with config overrides
@@ -152,9 +162,18 @@ export class DayAIClient {
   }
 
   /**
-   * Get a fresh access token by refreshing if needed
+   * The Day AI MCP server URL, for MCP clients that connect directly
+   * (Anthropic's MCP connector, the Claude Agent SDK, etc.).
    */
-  private async getAccessToken(): Promise<string> {
+  get mcpUrl(): string {
+    return `${this.config.baseUrl}/api/mcp`;
+  }
+
+  /**
+   * Get a valid access token, refreshing it if needed. Access tokens last
+   * about an hour; pass the result to MCP clients as a bearer token.
+   */
+  async getAccessToken(): Promise<string> {
     // Check if current token is still valid (with 60 second buffer)
     const now = Date.now() / 1000;
     if (this.currentAccessToken && this.tokenExpiresAt > now + 60) {
@@ -242,7 +261,10 @@ export class DayAIClient {
   }
 
   /**
-   * Make a GraphQL request
+   * Make a GraphQL request.
+   *
+   * @deprecated Day AI's GraphQL API doesn't accept integration (OAuth) tokens.
+   * Use the MCP tools via `mcpCallTool()` instead.
    */
   async graphql<T = any>(
     query: string,
@@ -286,6 +308,14 @@ export class DayAIClient {
       if (!metadata.success) {
         return metadata;
       }
+      // The metadata endpoint reports a bad token in the body, not the status.
+      if (metadata.data?.authError || !metadata.data?.workspaceId) {
+        return {
+          success: false,
+          error: `Authentication failed: ${metadata.data?.authError ?? 'no workspace returned'}`,
+          data: metadata.data,
+        };
+      }
 
       console.log("✅ Connection successful!");
       console.log(`   Workspace: ${metadata.data.workspaceName}`);
@@ -309,12 +339,49 @@ export class DayAIClient {
   }
 
   /**
-   * Make a JSON-RPC 2.0 request to the MCP endpoint
+   * Make a JSON-RPC 2.0 request to the MCP endpoint, retrying transient
+   * server errors when it's safe to.
+   *
+   * 503 means the request wasn't processed, so it's always retried. A 502 or
+   * 504 can arrive after the server finished the work, so tool calls are only
+   * retried for tools the server marks read-only.
    */
   private async mcpRequest(
     method: string,
     params?: any
   ): Promise<ApiResponse<any>> {
+    const maxAttempts = 3;
+    for (let attempt = 1; ; attempt++) {
+      const { result, status, retryAfterSeconds } = await this.mcpRequestOnce(method, params);
+      const transient = status === 502 || status === 503 || status === 504;
+      if (!transient || attempt >= maxAttempts) {
+        return result;
+      }
+      if (status !== 503 && method === 'tools/call' && !(await this.isReadOnlyTool(params?.name))) {
+        return result;
+      }
+      const delaySeconds = retryAfterSeconds ?? attempt;
+      await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
+    }
+  }
+
+  private async isReadOnlyTool(toolName: string | undefined): Promise<boolean> {
+    if (!toolName) return false;
+    if (!this.readOnlyTools) {
+      const list = await this.mcpRequestOnce('tools/list');
+      if (!list.result.success) return false;
+      const tools: McpTool[] = list.result.data?.tools ?? [];
+      this.readOnlyTools = new Set(
+        tools.filter((tool) => tool.annotations?.readOnlyHint).map((tool) => tool.name)
+      );
+    }
+    return this.readOnlyTools.has(toolName);
+  }
+
+  private async mcpRequestOnce(
+    method: string,
+    params?: any
+  ): Promise<{ result: ApiResponse<any>; status?: number; retryAfterSeconds?: number }> {
     try {
       const accessToken = await this.getAccessToken();
 
@@ -325,11 +392,12 @@ export class DayAIClient {
         params,
       };
 
-      const response = await fetch(`${this.config.baseUrl}/api/mcp`, {
+      const response = await fetch(this.mcpUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
+          'Accept': 'application/json, text/event-stream',
         },
         body: JSON.stringify(jsonRpcRequest),
       });
@@ -353,36 +421,52 @@ export class DayAIClient {
       }
 
       if (!response.ok) {
+        const retryAfter = Number(response.headers.get('retry-after'));
         return {
-          success: false,
-          error: `HTTP ${response.status}: ${response.statusText}`,
-          data: jsonRpcResponse,
+          status: response.status,
+          retryAfterSeconds: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+          result: {
+            success: false,
+            error: `HTTP ${response.status}: ${response.statusText}`,
+            data: jsonRpcResponse,
+          },
         };
       }
 
       if (!jsonRpcResponse) {
         return {
-          success: false,
-          error: `Invalid MCP response: ${parseError}`,
+          status: response.status,
+          result: {
+            success: false,
+            error: `Invalid MCP response: ${parseError}`,
+          },
         };
       }
 
       if (jsonRpcResponse.error) {
         return {
-          success: false,
-          error: `JSON-RPC Error ${jsonRpcResponse.error.code}: ${jsonRpcResponse.error.message}`,
-          data: jsonRpcResponse.error,
+          status: response.status,
+          result: {
+            success: false,
+            error: `JSON-RPC Error ${jsonRpcResponse.error.code}: ${jsonRpcResponse.error.message}`,
+            data: jsonRpcResponse.error,
+          },
         };
       }
 
       return {
-        success: true,
-        data: jsonRpcResponse.result,
+        status: response.status,
+        result: {
+          success: true,
+          data: jsonRpcResponse.result,
+        },
       };
     } catch (error) {
       return {
-        success: false,
-        error: error instanceof Error ? error.message : 'MCP request failed',
+        result: {
+          success: false,
+          error: error instanceof Error ? error.message : 'MCP request failed',
+        },
       };
     }
   }
@@ -464,7 +548,12 @@ export class DayAIClient {
     if (!text) {
       throw new Error('Empty MCP tool response');
     }
-    return JSON.parse(text) as T;
+    // Most tools return JSON, but some return plain text.
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return text as unknown as T;
+    }
   }
 
   /**
@@ -504,12 +593,39 @@ export class DayAIClient {
 
   /**
    * Find meetings by attendee email (contact) or domain (organization).
+   *
+   * Looks up the contact or organization first, then searches meetings by its
+   * objectId. Returns an empty result if no single match is found.
    */
   async findMeetingsByAttendee(
     emailOrDomain: string,
     options?: SearchOptions,
   ): Promise<ApiResponse<McpToolResult>> {
     const isOrg = !emailOrDomain.includes('@');
+    const targetObjectType = isOrg ? 'native_organization' : 'native_contact';
+    const lookup = await this.search(targetObjectType, {
+      propertyId: isOrg ? 'domain' : 'email',
+      operator: 'eq',
+      value: emailOrDomain,
+    });
+    const matches = (lookup[targetObjectType] as SearchResultSet | undefined)?.results ?? [];
+    if (matches.length !== 1) {
+      return {
+        success: true,
+        data: {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                note: `Found ${matches.length} ${targetObjectType} records for ${emailOrDomain}; expected exactly one.`,
+                candidates: matches.map((m) => ({ objectId: m.objectId, title: m.title })),
+              }),
+            },
+          ],
+        },
+      };
+    }
+
     return this.mcpCallTool('search_objects', {
       ...options,
       queries: [
@@ -517,8 +633,8 @@ export class DayAIClient {
           objectType: 'native_meetingrecording',
           where: {
             relationship: 'attendee',
-            targetObjectType: isOrg ? 'native_organization' : 'native_contact',
-            targetObjectId: emailOrDomain,
+            targetObjectType,
+            targetObjectId: matches[0].objectId,
             operator: 'eq',
           },
         },
@@ -532,8 +648,7 @@ export class DayAIClient {
   async createPerson(input: CreatePersonInput): Promise<any> {
     const { customProperties, ...standardProperties } = input;
     const raw = await this.mcpCallTool('create_or_update_person_organization', {
-      isCreating: true,
-      objectType: 'Person',
+      objectType: 'native_contact',
       standardProperties,
       ...(customProperties ? { customProperties } : {}),
     });
@@ -546,8 +661,7 @@ export class DayAIClient {
   async createOrganization(input: CreateOrganizationInput): Promise<any> {
     const { customProperties, ...standardProperties } = input;
     const raw = await this.mcpCallTool('create_or_update_person_organization', {
-      isCreating: true,
-      objectType: 'Organization',
+      objectType: 'native_organization',
       standardProperties,
       ...(customProperties ? { customProperties } : {}),
     });
@@ -568,7 +682,11 @@ export class DayAIClient {
   }
 
   /**
-   * Send a notification via email, Slack, or both.
+   * Send a notification to the current user by email, Slack DM, or both, or
+   * post to a Slack channel.
+   *
+   * Uses the `send_notification_mcp` tool, which is only available on some
+   * Day AI plans. Check `mcpListTools()` if this fails with a tier error.
    */
   async sendNotification(input: SendNotificationInput): Promise<any> {
     const raw = await this.mcpCallTool('send_notification_mcp', input);

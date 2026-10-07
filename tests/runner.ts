@@ -229,6 +229,10 @@ export class TestRunner {
       return files;
     }
 
+    if (fs.statSync(dir).isFile()) {
+      return [dir];
+    }
+
     const walk = (currentDir: string) => {
       const entries = fs.readdirSync(currentDir, { withFileTypes: true });
 
