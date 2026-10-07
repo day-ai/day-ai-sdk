@@ -657,17 +657,7 @@ ipcMain.handle('mcp-disconnect', async (_event, serverId: string) => {
   const servers = config.mcpServers || []
   const serverConfig = servers.find((s) => s.id === serverId)
 
-  if (serverConfig?.oauth) {
-    try {
-      await OAuthService.revokeToken(
-        `${serverConfig.baseUrl}/api/oauth/revoke`,
-        serverConfig.oauth.clientId,
-        serverConfig.oauth.accessToken
-      )
-    } catch {
-      // Ignore revocation errors
-    }
-  }
+  // Disconnecting clears the locally stored tokens.
 
   // Disconnect MCP client
   await MCPClientService.disconnectServer(serverId)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDayAIClient } from '@/lib/dayai'
+import { sendNotification } from '@/lib/dayai'
 import { getWeather, formatWeatherEmail } from '@/lib/weather'
 
 // Use Node.js runtime for better SDK compatibility
@@ -15,23 +15,18 @@ export async function POST(request: NextRequest) {
     const weather = await getWeather(location)
     console.log(`[Manual Sync] Weather fetched: ${weather.temp}°F, ${weather.conditions}`)
 
-    // Initialize Day AI client and MCP
-    const client = getDayAIClient()
-    await client.mcpInitialize()
-    console.log('[Manual Sync] Day AI MCP initialized')
-
     // Format email content
     const emailBody = formatWeatherEmail(weather)
 
-    // Send notification via Day AI
-    const result = await client.mcpCallTool('send_notification', {
+    // Email the authorized Day AI user (throws if the tool fails)
+    const result = await sendNotification({
       channel: 'email',
       emailSubject: `${weather.emoji} Manual Weather Update - ${weather.location}`,
       emailBody,
       reasoning: 'Manual weather update triggered from dashboard',
     })
 
-    console.log('[Manual Sync] Notification sent successfully', result)
+    console.log('[Manual Sync] Notification sent', result)
 
     return NextResponse.json({
       success: true,

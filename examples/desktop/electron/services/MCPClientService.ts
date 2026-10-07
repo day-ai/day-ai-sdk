@@ -62,9 +62,7 @@ export async function connectToServer(
       version: '1.0.0',
     },
     {
-      capabilities: {
-        tools: {},
-      },
+      capabilities: {},
     }
   )
 
@@ -191,9 +189,7 @@ async function refreshAndReconnect(connection: MCPServerConnection): Promise<voi
       version: '1.0.0',
     },
     {
-      capabilities: {
-        tools: {},
-      },
+      capabilities: {},
     }
   )
 
@@ -287,18 +283,19 @@ async function executeToolCall(
     arguments: args,
   })
 
+  const content = result.content as Array<{ type: string; text?: string }>
+
   // Handle the result based on its type
   if (result.isError) {
     throw new Error(
-      result.content
+      content
         .map((c) => (c.type === 'text' ? c.text : JSON.stringify(c)))
         .join('\n')
     )
   }
 
   // Extract the result content
-  const content = result.content
-  if (content.length === 1 && content[0].type === 'text') {
+  if (content.length === 1 && content[0].type === 'text' && content[0].text !== undefined) {
     try {
       return JSON.parse(content[0].text)
     } catch {

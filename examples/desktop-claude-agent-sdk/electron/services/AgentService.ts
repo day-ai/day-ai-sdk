@@ -197,6 +197,38 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
   }
 
   /**
+   * Options shared by chat() and chatWithStreaming().
+   *
+   * Claude Code's built-in tools (Bash, file edits, web) are switched off: this
+   * app only needs the connected MCP servers. Each server's tools are
+   * auto-approved with an `mcp__<server>__*` rule instead of bypassing
+   * permissions for everything.
+   */
+  private buildSdkOptions(
+    systemPromptAppend: string,
+    options?: AgentOptions
+  ): NonNullable<Parameters<typeof query>[0]['options']> {
+    const mcpServers = getConnectedServersForSDK()
+
+    return {
+      model: options?.model || DEFAULT_MODEL,
+      systemPrompt: {
+        type: 'preset',
+        preset: 'claude_code',
+        append: systemPromptAppend,
+      },
+      tools: [],
+      allowedTools: Object.keys(mcpServers).map((name) => `mcp__${name}__*`),
+      mcpServers,
+      pathToClaudeCodeExecutable: options?.claudeCodePath || this.claudeCodePath,
+      env: {
+        ...process.env,
+        ANTHROPIC_API_KEY: this.apiKey,
+      },
+    }
+  }
+
+  /**
    * Run an agent query using the Claude Agent SDK
    * This is the new primary interface that uses the SDK's async iterator
    */
@@ -215,24 +247,7 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
     // Build system prompt with note context
     const systemPromptAppend = this.buildSystemPrompt(context, mcpTools)
 
-    // Build SDK options
-    const sdkOptions: Parameters<typeof query>[0]['options'] = {
-      model: options?.model || DEFAULT_MODEL,
-      systemPrompt: {
-        type: 'preset',
-        preset: 'default',
-        append: systemPromptAppend,
-      },
-      maxThinkingTokens: 10000,
-      permissionMode: 'bypassPermissions', // Trust the tools for this app
-      pathToClaudeCodeExecutable: options?.claudeCodePath || this.claudeCodePath,
-      env: {
-        ...process.env,
-        ANTHROPIC_API_KEY: this.apiKey,
-      },
-      // Pass connected MCP servers (Day AI, etc.) with their OAuth tokens
-      mcpServers: getConnectedServersForSDK(),
-    }
+    const sdkOptions = this.buildSdkOptions(systemPromptAppend, options)
 
     // Resume session if provided
     if (options?.resume) {
@@ -332,23 +347,7 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
     // Build system prompt with note context
     const systemPromptAppend = this.buildSystemPrompt(context, mcpTools)
 
-    // Build SDK options
-    const sdkOptions: Parameters<typeof query>[0]['options'] = {
-      model: options?.model || DEFAULT_MODEL,
-      systemPrompt: {
-        type: 'preset',
-        preset: 'default',
-        append: systemPromptAppend,
-      },
-      maxThinkingTokens: 10000,
-      permissionMode: 'bypassPermissions',
-      pathToClaudeCodeExecutable: options?.claudeCodePath || this.claudeCodePath,
-      env: {
-        ...process.env,
-        ANTHROPIC_API_KEY: this.apiKey,
-      },
-      mcpServers: getConnectedServersForSDK(),
-    }
+    const sdkOptions = this.buildSdkOptions(systemPromptAppend, options)
 
     // Resume session if provided
     if (options?.resume) {
@@ -460,7 +459,7 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
     this.aborted = true
     if (this.activeQuery) {
       try {
-        await this.activeQuery.abort()
+        this.activeQuery.close()
       } catch {
         // Ignore abort errors
       }

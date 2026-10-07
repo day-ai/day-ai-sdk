@@ -33,6 +33,8 @@ export interface ChatMessage {
   content: string
   timestamp: string
   thinking?: string
+  // The model's full response blocks, passed back to the API on later turns
+  rawContent?: unknown[]
   toolCall?: ToolCall
   toolResult?: ToolResult
   isStreaming?: boolean
@@ -43,7 +45,8 @@ export interface AgentResponse {
   thinking?: string
   content: string
   toolCall?: ToolCall
-  stopReason: 'end_turn' | 'tool_use' | 'max_tokens'
+  stopReason: string | null
+  rawContent?: unknown[]
 }
 
 export interface StreamChunk {
@@ -94,7 +97,9 @@ const api = {
   onFullscreenChange: (callback: (isFullscreen: boolean) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, isFullscreen: boolean) => callback(isFullscreen)
     ipcRenderer.on('fullscreen-change', handler)
-    return () => ipcRenderer.removeListener('fullscreen-change', handler)
+    return () => {
+      ipcRenderer.removeListener('fullscreen-change', handler)
+    }
   },
 
   // Config API

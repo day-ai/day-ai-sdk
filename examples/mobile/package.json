@@ -11,7 +11,7 @@
     "dev": "concurrently \"npm run proxy\" \"npm run web\""
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.128.0",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "^2.1.0",
     "expo": "~54.0.30",

@@ -38,9 +38,26 @@ export interface ChatHookState {
 
 // Settings types
 
+export type ClaudeModel = 'claude-sonnet-5-5' | 'claude-opus-5-5' | 'claude-haiku-5-5';
+
+export const DEFAULT_MODEL: ClaudeModel = 'claude-sonnet-5-5';
+
+export const SUPPORTED_MODELS: ClaudeModel[] = [
+  'claude-sonnet-5-5',
+  'claude-opus-5-5',
+  'claude-haiku-5-5',
+];
+
+// Saved settings may hold a model ID from an older version of the app.
+export function normalizeModel(model: string | undefined): ClaudeModel {
+  return SUPPORTED_MODELS.includes(model as ClaudeModel)
+    ? (model as ClaudeModel)
+    : DEFAULT_MODEL;
+}
+
 export interface AppSettings {
   anthropicApiKey: string;
-  model: 'claude-sonnet-4-20250514' | 'claude-opus-4-20250514';
+  model: ClaudeModel;
 }
 
 // Day AI types (re-export from services for convenience)

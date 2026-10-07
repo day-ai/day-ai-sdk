@@ -34,6 +34,8 @@ export interface ChatMessage {
   content: string
   timestamp: string
   thinking?: string
+  // The model's full response blocks, passed back to the API on later turns
+  rawContent?: unknown[]
   toolCall?: ToolCall
   toolResult?: ToolResult
   isStreaming?: boolean
@@ -44,7 +46,8 @@ export interface AgentResponse {
   thinking?: string
   content: string
   toolCall?: ToolCall
-  stopReason: 'end_turn' | 'tool_use' | 'max_tokens'
+  stopReason: string | null
+  rawContent?: unknown[]
 }
 
 export interface StreamChunk {

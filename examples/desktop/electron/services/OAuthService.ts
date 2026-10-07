@@ -368,30 +368,3 @@ export async function refreshAccessToken(
     tokenType: data.token_type || 'Bearer',
   }
 }
-
-/**
- * Revoke an access token (logout)
- */
-export async function revokeToken(
-  revocationEndpoint: string,
-  clientId: string,
-  token: string,
-  tokenTypeHint: 'access_token' | 'refresh_token' = 'access_token'
-): Promise<void> {
-  const response = await fetch(revocationEndpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      client_id: clientId,
-      token,
-      token_type_hint: tokenTypeHint,
-    }).toString(),
-  })
-
-  if (!response.ok && response.status !== 200) {
-    const error = await response.text()
-    throw new Error(`Token revocation failed: ${error}`)
-  }
-}

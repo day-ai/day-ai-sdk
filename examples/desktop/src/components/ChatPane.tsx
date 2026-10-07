@@ -130,6 +130,7 @@ export default function ChatPane({ currentNote, onNoteUpdate, onNotesChanged, co
       content: response.content,
       timestamp: new Date().toISOString(),
       thinking: response.thinking,
+      rawContent: response.rawContent,
       toolCall: response.toolCall,
     }
 

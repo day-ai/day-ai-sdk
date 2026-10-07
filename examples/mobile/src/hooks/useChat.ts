@@ -1,6 +1,7 @@
 // Chat Hook - manages the full chat conversation flow with streaming and tool execution
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ChatMessage, ChatState, ChatHookState, ToolCall } from '../types';
+import { normalizeModel } from '../types';
 import { claudeService, dayAIService } from '../services';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -64,7 +65,7 @@ export function useChat() {
           claudeService.initialize(settings.anthropicApiKey);
         }
         if (settings.model) {
-          claudeService.setModel(settings.model);
+          claudeService.setModel(normalizeModel(settings.model));
         }
       }
     } catch (error) {
@@ -259,7 +260,7 @@ export function useChat() {
           SETTINGS_STORAGE_KEY,
           JSON.stringify({
             anthropicApiKey: newApiKey,
-            model: model || 'claude-sonnet-4-20250514',
+            model: normalizeModel(model),
           })
         );
       } catch (error) {
