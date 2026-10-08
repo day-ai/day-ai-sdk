@@ -2,27 +2,10 @@ import { useState, useMemo } from 'react'
 import { IconChevronDown } from '@tabler/icons-react'
 import type {
   ChatMessage,
-  MCPToolIcon,
   ToolCall,
   ToolResult,
   SDKContentBlock,
 } from '../types'
-import { emojiFromShortcode } from '../utils/emoji'
-
-function ToolIcon({ icon }: { icon?: MCPToolIcon }) {
-  if (!icon) return null
-
-  if (icon.type === 'emoji' && icon.value) {
-    return <span className="text-sm">{emojiFromShortcode(icon.value)}</span>
-  }
-
-  const src = icon.src || (icon.type === 'url' || icon.type === 'data-uri' ? icon.value : null)
-  if (src) {
-    return <img src={src} alt="" className="w-3.5 h-3.5 object-contain" />
-  }
-
-  return null
-}
 
 function formatToolName(name: string): string {
   if (name.startsWith('mcp__')) {
@@ -149,80 +132,6 @@ function getResultSummary(toolName: string, result: unknown): string {
   }
 
   return 'done'
-}
-
-function CompactToolCall({ toolCall, toolResult }: { toolCall: ToolCall; toolResult?: ToolResult }) {
-  const [expanded, setExpanded] = useState(false)
-
-  const displayName = toolCall.title || formatToolName(toolCall.name)
-  const isComplete = !!toolResult
-  const isSuccess = toolResult?.success ?? true
-  const summary = toolResult ? getResultSummary(toolCall.name, toolResult.result) : 'running...'
-  const input = toolCall.input || {}
-
-  return (
-    <div className="text-xs">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 w-full text-left py-1 px-2 -mx-2 rounded hover:bg-white/5 transition-colors group"
-      >
-        {/* Status indicator */}
-        {isComplete ? (
-          isSuccess ? (
-            <span className="text-green-400">✓</span>
-          ) : (
-            <span className="text-red-400">✗</span>
-          )
-        ) : (
-          <span className="text-white/30 animate-pulse">○</span>
-        )}
-
-        {/* Icon + Name */}
-        <span className="text-white/50 flex items-center gap-1.5">
-          <ToolIcon icon={toolCall.icon} />
-          <span>{displayName}</span>
-        </span>
-
-        {/* Arrow */}
-        <span className="text-white/20">→</span>
-
-        {/* Result summary */}
-        <span className={isComplete ? (isSuccess ? 'text-white/70' : 'text-red-400/70') : 'text-white/30'}>
-          {isSuccess ? summary : toolResult?.error || 'failed'}
-        </span>
-
-        {/* Expand chevron */}
-        <IconChevronDown
-          size={12}
-          className={`ml-auto text-white/20 transition-transform opacity-0 group-hover:opacity-100 ${expanded ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {/* Expanded details */}
-      {expanded && (
-        <div className="mt-1 ml-5 pl-3 border-l border-white/10 space-y-2">
-          {Object.keys(input).length > 0 && (
-            <div>
-              <div className="text-white/30 text-[10px] uppercase tracking-wide mb-1">Input</div>
-              <pre className="text-white/40 text-[11px] overflow-x-auto max-h-32 overflow-y-auto">
-                {JSON.stringify(input, null, 2)}
-              </pre>
-            </div>
-          )}
-          {toolResult?.result && (
-            <div>
-              <div className="text-white/30 text-[10px] uppercase tracking-wide mb-1">Output</div>
-              <pre className="text-white/40 text-[11px] overflow-x-auto max-h-32 overflow-y-auto">
-                {typeof toolResult.result === 'string'
-                  ? toolResult.result
-                  : JSON.stringify(toolResult.result, null, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
 }
 
 // Component for rendering tool use (inline style like traction)

@@ -1,1329 +1,502 @@
-# Zod Schemas by Object Type
+# Day AI Data Model & Search Reference
 
-## Organization
+How Day AI's CRM data is shaped, and how to query it with `search_objects`.
 
-| Property Key                    | Day AIProperty Type | Zod Type                                                              | Description                                                                                                                           |
-| ------------------------------- | ------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| name                            | TextArea            | `z.string().optional()`                                               | The name of the organization                                                                                                          |
-| description                     | TextArea            | `z.string().optional()`                                               | The description of the organization                                                                                                   |
-| domain                          | TextArea            | `z.string().min(1)`                                                   | The domain of the organization. This is the objectId of the organization. This property is required when creating a new organization. |
-| aiDescription                   | TextArea            | `z.string().optional()`                                               | The AI-generated description of the organization                                                                                      |
-| founded                         | Integer             | `z.number().int().min(1800).max(new Date().getFullYear()).optional()` | Year founded                                                                                                                          |
-| promises                        | TextArea            | `z.array(z.string()).optional()`                                      | The marketing promises of the organization                                                                                            |
-| naicsCodes                      | TextArea            | `z.array(z.number()).optional()`                                      | The NAICS codes of the organization                                                                                                   |
-| sicCodes                        | TextArea            | `z.array(z.number()).optional()`                                      | The SIC codes of the organization                                                                                                     |
-| industry                        | TextArea            | `z.enum(Object.values(OrganizationIndustryTypes)).optional()`         | Industry sector                                                                                                                       |
-| primaryPhoneNumber              | Phone               | `z.string().optional()`                                               | Primary phone number, formatted as +12345678900                                                                                       |
-| employeeCountFrom               | Integer             | `z.number().int().positive().optional()`                              | The min number of employees an organization has.                                                                                      |
-| employeeCountTo                 | Integer             | `z.number().int().positive().optional()`                              | The max number of employees an organization has.                                                                                      |
-| employeeCount                   | Integer             | `z.number().int().positive().optional()`                              | The number of employees an organization has.                                                                                          |
-| doesBusinessWith                | TextArea            | `z.array(z.enum(['B2B', 'B2C', 'B2G'])).optional()`                   | Business model types                                                                                                                  |
-| missionAndVision                | TextArea            | `z.string().optional()`                                               | The mission and vision of the organization in one sentence.                                                                           |
-| values                          | TextArea            | `z.array(z.string()).optional()`                                      | The organizational values of the organization.                                                                                        |
-| differentiators                 | TextArea            | `z.array(z.string()).optional()`                                      | The differentiators of the organization.                                                                                              |
-| isHiring                        | Boolean             | `z.boolean().optional()`                                              | Whether the organization is hiring.                                                                                                   |
-| industryType                    | TextArea            | `z.string().optional()`                                               | The industry type of the organization.                                                                                                |
-| annualRevenue                   | Float               | `z.number().positive().optional()`                                    | The annual revenue of the organization.                                                                                               |
-| funding                         | Float               | `z.number().positive().optional()`                                    | The funding the organization has received.                                                                                            |
-| location                        | TextArea            | `z.string().optional()`                                               | The location of the organization. This is the city, state, and country.                                                               |
-| address                         | TextArea            | `z.string().optional()`                                               | The address of where the organization is located. This is the full street address.                                                    |
-| city                            | TextArea            | `z.string().optional()`                                               | The city of where the organization is located.                                                                                        |
-| state                           | TextArea            | `z.string().optional()`                                               | The state of where the organization is located.                                                                                       |
-| country                         | TextArea            | `z.string().optional()`                                               | The country of where the organization is located.                                                                                     |
-| postalCode                      | TextArea            | `z.string().optional()`                                               | The postal code of where the organization is located.                                                                                 |
-| photoSquare                     | Url                 | `z.string().optional()`                                               | The square photo of the organization, the url link to it. remember, urls must start with https://                                     |
-| stockTicker                     | TextArea            | `z.string().optional()`                                               | The stock ticker symbol of the organization.                                                                                          |
-| socialTwitter                   | Url                 | `z.string().optional()`                                               | The twitter url of the organization. remember, urls must start with https://                                                          |
-| socialLinkedIn                  | Url                 | `z.string().optional()`                                               | The linkedin url of the organization. remember, urls must start with https://                                                         |
-| socialFacebook                  | Url                 | `z.string().optional()`                                               | The facebook url of the organization. remember, urls must start with https://                                                         |
-| socialYouTube                   | Url                 | `z.string().optional()`                                               | The youtube url of the organization. remember, urls must start with https://                                                          |
-| socialInstagram                 | Url                 | `z.string().optional()`                                               | The instagram url of the organization. remember, urls must start with https://                                                        |
-| edgarCik                        | TextArea            | `z.string().optional()`                                               | The edgar cik of the organization.                                                                                                    |
-| crunchbaseEntityId              | TextArea            | `z.string().optional()`                                               | The crunchbase id of the organization.                                                                                                |
-| linkCrunchbase                  | Url                 | `z.string().optional()`                                               | The crunchbase url of the organization. remember, urls must start with https://                                                       |
-| linkAngelList                   | Url                 | `z.string().optional()`                                               | The angellist url of the organization. remember, urls must start with https://                                                        |
-| resolvedUrl                     | Url                 | `z.string().optional()`                                               | The resolved url of the organization. Remember, urls must start with https://                                                         |
-| opportunityIds                  | TextArea            | `z.array(z.string()).optional()`                                      | The opportunity ids of the organization.                                                                                              |
-| status/highLevelSummary         | TextArea            | `z.array(z.string()).optional()`                                      | The Organization Status field provides a concise snapshot of your relationship with each organization...                              |
-| status/currentStatusOneSentence | TextArea            | `z.string().optional()`                                               | A single sentence capturing the most crucial aspect of the current relationship...                                                    |
-| status/nextSteps                | TextArea            | `z.string().optional()`                                               | Recommended next steps with the organization                                                                                          |
-| status/warmth                   | Integer             | `z.number().int().optional()`                                         | Relationship warmth score (calculated)                                                                                                |
-| objective/relationshipOrigin    | TextArea            | `z.string().optional()`                                               | How did the two companies meet? was there an email, introduction, meeting, etc?                                                       |
-| objective/roles                 | TextArea            | `z.array(z.object({...})).optional()`                                 | The roles of the organization.                                                                                                        |
-| hasOpportunity                  | Boolean             | `z.boolean().optional()`                                              | Whether there's an active opportunity with this organization                                                                          |
-| traffic                         | Integer             | `z.number().int().optional()`                                         | Estimated monthly website traffic                                                                                                     |
-| keywords                        | TextArea            | `z.array(z.string()).optional()`                                      | Keywords associated with the organization                                                                                             |
-| news                            | TextArea            | `z.string().optional()`                                               | Recent news about the organization                                                                                                    |
+- For the **tool list and every tool's input schema**, see [TOOLS.md](TOOLS.md) (generated from the live server).
+- For the **exact properties in your workspace** (including custom properties and picklist option IDs), call `read_crm_schema`. It is always more current than this page.
 
-## Person (Contact)
-
-| Property Key        | Property Type | Zod Type                              | Description                                                                                                  |
-| ------------------- | ------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| email               | Email         | `z.string().email()`                  | The primary email address of the person. This is the objectId for the person record. Required when creating. |
-| firstName           | TextArea      | `z.string().optional()`               | The first name of the person                                                                                 |
-| lastName            | TextArea      | `z.string().optional()`               | The last name of the person                                                                                  |
-| linkedInUrl         | Url           | `z.string().url().optional()`         | The LinkedIn profile URL of the person. remember, urls must start with https://                              |
-| description         | TextArea      | `z.string().optional()`               | The career-focused, usually one-line summary/bio of the person                                               |
-| careerSummary       | TextArea      | `z.string().optional()`               | Paragraph-form history of the person's career                                                                |
-| canonicalEmail      | Email         | `z.string().email().optional()`       | The canonical email address of the person.                                                                   |
-| primaryPhoneNumber  | Phone         | `z.string().optional()`               | The primary phone number of the person. format: +1234567890                                                  |
-| location            | TextArea      | `z.string().optional()`               | The physical location of the person                                                                          |
-| timezone            | TextArea      | `z.string().optional()`               | The UTC timezone of the person                                                                               |
-| country             | TextArea      | `z.string().optional()`               | The country of the person's primary residence                                                                |
-| city                | TextArea      | `z.string().optional()`               | The city of the person's primary residence                                                                   |
-| state               | TextArea      | `z.string().optional()`               | The state of the person's primary residence                                                                  |
-| postalCode          | TextArea      | `z.string().optional()`               | The postal code of the person's primary residence                                                            |
-| headline            | TextArea      | `z.string().optional()`               | The headline of the person, this is the person's LinkedIn "headline".                                        |
-| industry            | TextArea      | `z.string().optional()`               | The industry of the person.                                                                                  |
-| socialFacebook      | Url           | `z.string().url().optional()`         | The Facebook profile URL of the person                                                                       |
-| socialTwitter       | Url           | `z.string().url().optional()`         | The X (Twitter) profile URL of the person                                                                    |
-| socialGithub        | Url           | `z.string().url().optional()`         | The GitHub profile URL of the person                                                                         |
-| socialLinkedIn      | Url           | `z.string().url().optional()`         | The LinkedIn profile URL of the person                                                                       |
-| currentCompanyName  | TextArea      | `z.string().optional()`               | The name of the person's current organization.                                                               |
-| currentJobTitle     | TextArea      | `z.string().optional()`               | The job title of the person's current organization.                                                          |
-| currentJobStartDate | DateTime      | `z.string().optional()`               | The start date of the person's current job.                                                                  |
-| skills              | TextArea      | `z.array(z.string()).optional()`      | The skills of the person.                                                                                    |
-| languages           | TextArea      | `z.array(z.string()).optional()`      | The languages spoken by the person.                                                                          |
-| interests           | TextArea      | `z.array(z.string()).optional()`      | The interests of the person.                                                                                 |
-| workExperience      | TextArea      | `z.array(z.object({...})).optional()` | The work experience of the person.                                                                           |
-| education           | TextArea      | `z.array(z.object({...})).optional()` | The education of the person.                                                                                 |
-| certifications      | TextArea      | `z.array(z.string()).optional()`      | The certifications of the person.                                                                            |
-| organization        | Calculated    | `z.string().optional()`               | The person's organization (extracted from email domain)                                                      |
-| currentWorkEmail    | Email         | `z.string().email().optional()`       | The person's current work email address                                                                      |
-| pastEmails          | TextArea      | `z.array(z.string()).optional()`      | All email addresses associated with this person                                                              |
-| phoneNumbers        | TextArea      | `z.array(z.string()).optional()`      | All phone numbers for the person                                                                             |
-| photoUrl            | Url           | `z.string().url().optional()`         | Profile photo URL                                                                                            |
-| gender              | TextArea      | `z.string().optional()`               | Gender of the person                                                                                         |
-
-### Complex Object Schemas for Person
-
-**workExperience schema:**
-
-```typescript
-z.array(
-  z.object({
-    companyName: z.string(),
-    jobTitle: z.string(),
-    startDate: z.string(),
-    endDate: z.string().nullable(),
-    description: z.string(),
-  })
-);
-```
-
-**education schema:**
-
-```typescript
-z.array(
-  z.object({
-    schoolName: z.string(),
-    degree: z.string(),
-    fieldOfStudy: z.string(),
-    startDate: z.string(),
-    endDate: z.string(),
-  })
-);
-```
-
-## Pipeline
-
-| Property Key     | Property Type | Zod Type                     | Description                                                       |
-| ---------------- | ------------- | ---------------------------- | ----------------------------------------------------------------- |
-| title            | TextArea      | `z.string().min(1)`          | The title of the pipeline. Required when creating.                |
-| description      | TextArea      | `z.string().optional()`      | The description of the pipeline                                   |
-| hasRevenue       | Boolean       | `z.boolean().optional()`     | Whether the pipeline tracks revenue. Required when creating.      |
-| type             | TextArea      | `z.enum([...]).optional()`   | The type of pipeline. Required when creating.                     |
-| automationActive | Boolean       | `z.boolean().optional()`     | Whether automation is active                                      |
-| icpOrganization  | TextArea      | `z.string().optional()`      | Ideal customer profile for organizations. Required when creating. |
-| icpMetadata      | TextArea      | `z.object({...}).optional()` | Metadata for Ideal Customer Profile. Required when creating.      |
-| icpPeople        | TextArea      | `z.object({...}).optional()` | Role-level professional information for target prospects          |
-
-### Complex Object Schemas for Pipeline
-
-**type enum values:**
-
-- `'NEW_CUSTOMER'`
-- `'EXISTING_CUSTOMER'`
-- `'FINANCING_INVESTMENT'`
-- `'VENTURE_CAPITAL'`
-- `'PARTNER'`
-
-**icpMetadata schema:**
-
-```typescript
-z.object({
-  countries: z.array(z.string()).optional(),
-  employeeCountFrom: z.number().int().positive().optional(),
-  employeeCountTo: z.number().int().positive().optional(),
-  industry: z.array(z.string()).optional(),
-  sellingTo: z.array(z.enum(["B2B", "B2C", "B2G"])).optional(),
-});
-```
-
-**icpPeople schema:**
-
-```typescript
-z.object({
-  jobTitles: z
-    .array(
-      z.object({
-        department: z.string(),
-        track: z.string(),
-        level: z.number().int(),
-      })
-    )
-    .optional(),
-});
-```
-
-## Stage
-
-| Property Key      | Property Type   | Zod Type                              | Description                                                        |
-| ----------------- | --------------- | ------------------------------------- | ------------------------------------------------------------------ |
-| title             | TextArea        | `z.string().min(1)`                   | Stage title. Required when creating.                               |
-| type              | TextArea        | `z.enum(Object.values(StageTypes))`   | The type of stage. Once set, it cannot be changed.                 |
-| description       | TextArea        | `z.string().optional()`               | Stage description                                                  |
-| expectedRevenue   | Currency        | `z.number().positive().optional()`    | Expected revenue                                                   |
-| likelihoodToClose | Percent         | `z.number().min(0).max(1).optional()` | Likelihood to close (0-1). AUTO-ASSIGNED based on stage type.      |
-| entranceCriteria  | TextArea        | `z.array(z.string()).optional()`      | Entrance criteria list. PROVIDE MULTIPLE CRITERIA (2-4 per stage). |
-| pipelineId        | ObjectReference | `z.string()`                          | The uuid of the pipeline this stage belongs to.                    |
-| position          | Integer         | `z.number().int().min(1).optional()`  | Stage position (1-based).                                          |
-
-## Opportunity
-
-| Property Key           | Property Type | Zod Type                                              | Description                                                      |
-| ---------------------- | ------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| title                  | TextArea      | `z.string().min(1)`                                   | The title of the opportunity. Required when creating.            |
-| stageId                | Picklist      | `z.string()`                                          | The object reference of the stage this opportunity is in.        |
-| domain                 | TextArea      | `z.string().optional()`                               | The domain associated with the opportunity.                      |
-| roles                  | TextArea      | `z.array(z.object({...})).optional()`                 | The people associated with this opportunity and their roles.     |
-| timeframeStart         | DateTime      | `z.string().datetime().optional()`                    | The start date of the opportunity.                               |
-| timeframeEnd           | DateTime      | `z.string().datetime().optional()`                    | The end date of the opportunity.                                 |
-| expectedCloseDate      | DateTime      | `z.string().datetime().optional()`                    | The expected close date for this opportunity.                    |
-| expectedRevenue        | Float         | `z.number().positive().optional()`                    | The expected annual recurring revenue.                           |
-| ownerEmail             | Email         | `z.string().email().optional()`                       | The email of the person responsible. MUST be a workspace member. |
-| currentStatus          | TextArea      | `z.string().optional()`                               | The current status of the opportunity.                           |
-| currentSituation       | TextArea      | `z.array(z.string()).optional()`                      | The current situation of the opportunity.                        |
-| goalsAndKPIs           | TextArea      | `z.object({content: z.array(z.string())}).optional()` | The goals and KPIs for this opportunity.                         |
-| challengesAndSolutions | TextArea      | `z.array(z.object({...})).optional()`                 | The challenges and solutions for this opportunity.               |
-| amount                 | Float         | `z.number().positive().optional()`                    | The deal amount of the opportunity.                              |
-| probability            | Float         | `z.number().min(0).max(100).optional()`               | Probability of closing (0-100)                                   |
-| organizationName       | TextArea      | `z.string().optional()`                               | The name of the organization                                     |
-| description            | TextArea      | `z.string().optional()`                               | A description of the opportunity                                 |
-| pipelineId             | ObjectRef     | `z.string().optional()`                               | The pipeline this opportunity belongs to                         |
-| pipelineTitle          | TextArea      | `z.string().optional()`                               | The title of the pipeline                                        |
-| organizationId         | ObjectRef     | `z.string().optional()`                               | The organization ID this opportunity is for                      |
-| type                   | TextArea      | `z.string().optional()`                               | The type of opportunity                                          |
-| position               | Integer       | `z.number().int().optional()`                         | Position in the stage                                            |
-| daysInStage            | Calculated    | `z.number().int().optional()`                         | Days in current stage (calculated)                               |
-| competition            | StringArray   | `z.array(z.string()).optional()`                      | Competitors for this opportunity                                 |
-| recommendedStage       | TextArea      | `z.string().optional()`                               | AI-recommended stage                                             |
-| autoStageMovement      | Boolean       | `z.boolean().optional()`                              | Whether AI can auto-move this opportunity between stages         |
-
-### Complex Object Schemas for Opportunity
-
-**roles schema:**
-
-```typescript
-z.array(
-  z.object({
-    personEmail: z.string().email(),
-    roles: z.array(
-      z.enum([
-        "ECONOMIC_BUYER",
-        "PRIMARY_CONTACT",
-        "CHAMPION",
-        "SUPPORTER",
-        "DETRACTOR",
-        "DIRECT_BENEFIT",
-      ])
-    ),
-  })
-);
-```
-
-**challengesAndSolutions schema:**
-
-```typescript
-z.array(
-  z.object({
-    challenge: z.string(),
-    solution: z.string(),
-  })
-);
-```
-
-## Action
-
-| Property Key      | Property Type | Zod Type                                           | Description                                                      |
-| ----------------- | ------------- | -------------------------------------------------- | ---------------------------------------------------------------- |
-| title             | TextArea      | `z.string().optional()`                            | The title of the action. Required for creating.                  |
-| status            | Picklist      | `z.enum(Object.values(ActionStatus)).optional()`   | The status of the action. Required when creating.                |
-| ownerEmail        | Email         | `z.string().email().optional()`                    | The email of the owner. MUST be a workspace member or assistant. |
-| descriptionPoints | TextArea      | `z.array(z.string()).optional()`                   | Bullet points describing the action in detail.                   |
-| people            | TextArea      | `z.array(z.string()).optional()`                   | The people's emails for whom the action must be completed.       |
-| domains           | Email         | `z.array(z.string()).optional()`                   | The domains for whom the action must be completed.               |
-| priority          | Picklist      | `z.enum(Object.values(ActionPriority)).optional()` | The priority of the action.                                      |
-| type              | Picklist      | `z.enum(Object.values(ActionType)).optional()`     | The type of the action.                                          |
-| timeframeEnd      | DateTime      | `z.string().optional()`                            | The due date of the action.                                      |
-
-## MeetingRecording
-
-| Property Key       | Property Type | Zod Type                         | Description                                                     |
-| ------------------ | ------------- | -------------------------------- | --------------------------------------------------------------- |
-| title              | TextArea      | `z.string().optional()`          | The title of the meeting                                        |
-| description        | TextArea      | `z.string().optional()`          | AI-generated description of the meeting                         |
-| topic              | TextArea      | `z.string().optional()`          | The main topic discussed in the meeting                         |
-| descriptionBullets | StringArray   | `z.array(z.string()).optional()` | Key points from the meeting as bullet points                    |
-| summaryShort       | TextArea      | `z.string().optional()`          | Short summary of the meeting                                    |
-| summaryLong        | TextArea      | `z.string().optional()`          | Detailed summary of the meeting                                 |
-| notes              | TextArea      | `z.string().optional()`          | AI-generated notes from the meeting (searchable)                |
-| transcript/vtt     | TextArea      | `z.string().optional()`          | Full VTT transcript of the meeting                              |
-| participants       | TextArea      | `z.array(z.string()).optional()` | All participants in the meeting (email addresses)               |
-| domains            | TextArea      | `z.array(z.string()).optional()` | The domains of the organizations of the meeting participants    |
-| storedAt           | DateTime      | `z.string().optional()`          | When the recording was stored (use for timeframeField)          |
-| userWasInMeeting   | Boolean       | `z.boolean().optional()`         | Whether the current user was a participant                      |
-| statusLabel        | Picklist      | `z.string().optional()`          | System status of the recording                                  |
-| statusMessage      | TextArea      | `z.string().optional()`          | Status details/message                                          |
-
-**Search Tips:**
-- Use `timeframeField: 'storedAt'` to search by when recordings were stored
-- Search `notes` or `description` with `contains` operator to find discussions of specific topics
-- Use relationship search with `attendee` to find meetings by person or company
-
-## Page
-
-| Property Key       | Property Type | Zod Type                | Description                                                |
-| ------------------ | ------------- | ----------------------- | ---------------------------------------------------------- |
-| title              | TextArea      | `z.string().optional()` | The title of the page                                      |
-| templateType       | TextArea      | `z.string().optional()` | The template type of the page                              |
-| publishedForUserAt | DateTime      | `z.string().optional()` | The date and time the page was published for the workspace |
-| contentHtml        | TextArea      | `z.string().optional()` | The HTML content of the page                               |
-
-## GmailThread
-
-| Property Key | Property Type | Zod Type                         | Description               |
-| ------------ | ------------- | -------------------------------- | ------------------------- |
-| summary      | TextArea      | `z.string().optional()`          | The summary of the thread |
-| allEmails    | TextArea      | `z.array(z.string()).optional()` | All emails in the thread  |
-| allDomains   | TextArea      | `z.array(z.string()).optional()` | All domains in the thread |
-
-## SlackMessage
-
-| Property Key | Property Type | Zod Type                         | Description                                                    |
-| ------------ | ------------- | -------------------------------- | -------------------------------------------------------------- |
-| body         | TextArea      | `z.string().optional()`          | The body of the message                                        |
-| authorEmail  | Email         | `z.string().optional()`          | The email of the person who sent the message                   |
-| authorName   | TextArea      | `z.string().optional()`          | The name of the person who sent the message                    |
-| authorDomain | TextArea      | `z.string().optional()`          | The domain of the organization of the sender                   |
-| domains      | TextArea      | `z.array(z.string()).optional()` | The domains of organizations associated with the Slack Channel |
-
-## Event
-
-| Property Key   | Property Type | Zod Type                         | Description                                       |
-| -------------- | ------------- | -------------------------------- | ------------------------------------------------- |
-| title          | TextArea      | `z.string().optional()`          | The title of the meeting                          |
-| description    | TextArea      | `z.string().optional()`          | The description of the meeting                    |
-| attendees      | TextArea      | `z.array(z.string()).optional()` | All attendees of the meeting                      |
-| organizerEmail | Email         | `z.string().optional()`          | The email of the person who called the meeting    |
-| domains        | TextArea      | `z.array(z.string()).optional()` | The domains of the organizations of the attendees |
-
-## Template
-
-| Property Key     | Property Type | Zod Type                               | Description                                          |
-| ---------------- | ------------- | -------------------------------------- | ---------------------------------------------------- |
-| type             | Picklist      | `z.enum(Object.values(TemplateTypes))` | The type of template                                 |
-| description      | TextArea      | `z.string().optional()`                | The description of what the template is for/contains |
-| descriptionShort | TextArea      | `z.string().optional()`                | Short description of the template                    |
-| skillset         | Picklist      | `z.string().optional()`                | Template skillset category                           |
-
-### Template Types
-
-- `EMAIL` - Email templates
-- `INTERNAL_PAGE` - Internal page templates
-- `KNOWLEDGE` - Knowledge base templates
-
-## Thread
-
-| Property Key     | Property Type | Zod Type                | Description                                |
-| ---------------- | ------------- | ----------------------- | ------------------------------------------ |
-| title            | TextArea      | `z.string().optional()` | The title of the conversation thread       |
-| objectReferences | TextArea      | `z.string().optional()` | JSON array of associated object references |
-| dismissedObjects | TextArea      | `z.string().optional()` | JSON array of dismissed object IDs         |
-| assistantGoal    | TextArea      | `z.string().optional()` | The assistant's goal for the conversation  |
-| modelId          | TextArea      | `z.string().optional()` | AI model ID used for the thread            |
-| status           | Picklist      | `z.string().optional()` | Thread status                              |
-
-## Draft
-
-| Property Key      | Property Type | Zod Type                              | Description                         |
-| ----------------- | ------------- | ------------------------------------- | ----------------------------------- |
-| channel           | TextArea      | `z.enum(['EMAIL', 'SLACK'])`          | Channel type for the draft          |
-| type              | TextArea      | `z.string().optional()`               | Draft type                          |
-| status            | TextArea      | `z.string().optional()`               | Current status of the draft         |
-| scheduledSendTime | DateTime      | `z.string().datetime().optional()`    | Scheduled send time for the draft   |
-
-## Context (Notes)
-
-Notes attached to CRM objects.
-
-| Property Key | Property Type | Zod Type                | Description                                |
-| ------------ | ------------- | ----------------------- | ------------------------------------------ |
-| presence     | TextArea      | `z.string().optional()` | Metadata carrier for the note              |
-| summary      | TextArea      | `z.string().optional()` | AI-generated summary of the note content   |
-
-**Note:** To read actual note content, you need to:
-1. Search `native_context` with `includeRelationships: true`
-2. Get the related `native_page` objectId from the relationships
-3. Fetch the page content with a second search using `objectIds`
+> **Golden rules**
+> 1. **objectIds are opaque.** Contacts and organizations are keyed by UUID, not by email or domain. Never build an objectId yourself — use one a tool returned.
+> 2. **Look before you filter.** Call `read_crm_schema` for an object type before your first non-trivial query on it.
+> 3. **Find by property, then by relationship.** To filter by a person or company you only know by email or domain, first search for it by its `email` / `domain` property, then use the returned `objectId` in a relationship filter.
 
 ---
 
-# Object Relationships
+## Contents
 
-Relationships define how objects connect to each other in Day AI. Use relationships with `search_objects` to find objects based on their connections.
-
-## Relationship Search Syntax
-
-When searching by relationship, use this structure in the `where` clause:
-
-```typescript
-{
-  relationship: string;       // The relationship name (e.g., "attendee", "related")
-  targetObjectType: string;   // The type of related object (e.g., "native_contact")
-  targetObjectId: string;     // The ID of the target object
-  operator: "eq";             // Usually "eq" for relationship matches
-}
-```
-
-**Important Notes:**
-- For `native_contact` targets, use the email address as `targetObjectId` (e.g., "john@acme.com")
-- For `native_organization` targets, use the domain as `targetObjectId` (e.g., "acme.com")
-- For other object types, use the object's UUID
-
-## Meeting Recording Relationships
-
-| Relationship | Target Type | Description | Example Use Case |
-|-------------|-------------|-------------|------------------|
-| `attendee` | `native_contact` | People who attended the meeting | Find meetings with a specific person |
-| `attendee` | `native_organization` | Organizations represented in the meeting | Find meetings with a specific company |
-
-**Example: Find meetings attended by a person**
-```json
-{
-  "queries": [{
-    "objectType": "native_meetingrecording",
-    "where": {
-      "relationship": "attendee",
-      "targetObjectType": "native_contact",
-      "targetObjectId": "john@acme.com",
-      "operator": "eq"
-    }
-  }],
-  "includeRelationships": true
-}
-```
-
-**Example: Find meetings with a company**
-```json
-{
-  "queries": [{
-    "objectType": "native_meetingrecording",
-    "where": {
-      "relationship": "attendee",
-      "targetObjectType": "native_organization",
-      "targetObjectId": "acme.com",
-      "operator": "eq"
-    }
-  }],
-  "includeRelationships": true
-}
-```
-
-## Opportunity Relationships
-
-| Relationship | Target Type | Description | Example Use Case |
-|-------------|-------------|-------------|------------------|
-| `related` | `native_contact` | People involved in the opportunity | Find opportunities involving a person |
-| `related` | `native_organization` | Companies related to the opportunity | Find opportunities with a company |
-| `subject` | `native_organization` | Primary company the opportunity is about | Find opportunities for a specific company |
-| `stage` | `native_stage` | Current pipeline stage | Find opportunities in a specific stage |
-| `assignee` | `native_user` | Deal owner | Find opportunities owned by a user |
-
-**Example: Find opportunities related to a contact**
-```json
-{
-  "queries": [{
-    "objectType": "native_opportunity",
-    "where": {
-      "relationship": "related",
-      "targetObjectType": "native_contact",
-      "targetObjectId": "john@acme.com",
-      "operator": "eq"
-    }
-  }],
-  "includeRelationships": true
-}
-```
-
-**Example: Find opportunities with a company**
-```json
-{
-  "queries": [{
-    "objectType": "native_opportunity",
-    "where": {
-      "relationship": "related",
-      "targetObjectType": "native_organization",
-      "targetObjectId": "acme.com",
-      "operator": "eq"
-    }
-  }],
-  "includeRelationships": true
-}
-```
-
-## Pipeline & Stage Relationships
-
-| Source | Relationship | Target | Description |
-|--------|-------------|--------|-------------|
-| `native_stage` | `pipeline` | `native_pipeline` | Stage belongs to a pipeline |
-| `native_pipeline` | `stage` | `native_stage` | Pipeline contains stages |
-| `native_opportunity` | `stage` | `native_stage` | Opportunity is in a stage |
-
-**Best Practice:** When querying pipelines/stages/opportunities:
-1. Search for the pipeline first
-2. Use `includeRelationships: true` to get stages
-3. Search opportunities by stage ID
-
-## Context (Notes) Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `parent` | `native_contact` | Note attached to a person |
-| `parent` | `native_organization` | Note attached to a company |
-| `parent` | `native_opportunity` | Note attached to a deal |
-| `parent` | `native_meetingrecording` | Note attached to a meeting |
-
-**Example: Find notes on an organization**
-```json
-{
-  "queries": [{
-    "objectType": "native_context",
-    "where": {
-      "relationship": "parent",
-      "targetObjectType": "native_organization",
-      "targetObjectId": "acme.com",
-      "operator": "eq"
-    }
-  }],
-  "includeRelationships": true
-}
-```
-
-## Email Thread Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `recipient` | `native_contact` | People on the email thread |
-| `recipient` | `native_organization` | Organizations on the email thread |
-| `sender` | `native_contact` | Last sender of the thread |
-
-## Calendar Event Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `attendee` | `native_contact` | People invited to the event |
-| `attendee` | `native_organization` | Organizations represented |
-| `organizer` | `native_contact` | Event organizer |
-
-## Person-Organization Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `organization` | `native_organization` | Person's employer |
-| `member` | `native_contact` | Organization's employees |
-
-## Action (Task) Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `related` | `native_opportunity` | Related opportunity |
-| `assignee` | `native_user` | Task owner |
-| `related` | `native_contact` | Related person |
-| `related` | `native_organization` | Related company |
-
-## Template Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `content` | `native_page` | Template content (the actual page with HTML) |
-
-**Best Practice for Templates:**
-1. Search `native_template` with `includeRelationships: true`
-2. Extract the `native_page` objectId from the content relationship
-3. Search `native_page` with `objectIds` to get the actual content
-
-## Gmail Message Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `sender` | `native_contact` | Person who sent the message |
-| `sender` | `native_organization` | Organization of the sender |
-| `recipient` | `native_contact` | People who received the message |
-| `recipient` | `native_organization` | Organizations of recipients |
-
-## Slack Message Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `author` | `native_contact` | Person who sent the message |
-| `author` | `native_organization` | Organization of the author |
-| `present` | `native_organization` | Organizations present in the channel |
-
-## Draft Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `content` | `native_page` | Draft content (HTML body) |
-| `hasRecipient` | `native_contact` | Recipients of the draft |
-| `parent` | `native_thread` | Thread that generated the draft |
-| `parent` | `native_action` | Action that generated the draft |
-
-## Page Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `creator` | `native_user` | User who created the page |
-| `creator` | `native_assistant` | Assistant that created the page |
-
-## Thread Relationships
-
-| Relationship | Target Type | Description |
-|-------------|-------------|-------------|
-| `creator` | `native_user` | User who started the thread |
-| `assistant` | `native_assistant` | Assistant handling the thread |
-| `source` | Various | Object the thread is about (Contact, Organization, Opportunity, etc.) |
-| `message` | `native_threadmessage` | Messages in the thread |
-
-## Inverse Relationships Reference
-
-Many relationships are bidirectional. Here are common inverse lookups:
-
-| If you search... | Relationship | You can also search the inverse... |
-|-----------------|--------------|-----------------------------------|
-| MeetingRecording → Contact | `attendee` | Contact → MeetingRecording via `attended` |
-| Opportunity → Organization | `related` | Organization → Opportunity via `involved in` |
-| Context → Organization | `parent` | Organization → Context via `has note` |
-| Organization → Person | `member` | Person → Organization via `organization` |
-| Stage → Pipeline | `pipeline` | Pipeline → Stage via `stage` |
-| Opportunity → Stage | `stage` | Stage → Opportunity via `opportunity` |
+- [Object types](#object-types)
+- [objectIds](#objectids)
+- [search_objects](#search_objects)
+  - [Request shape](#request-shape)
+  - [Where clauses & operators](#where-clauses--operators)
+  - [Time ranges](#time-ranges)
+  - [Full-text (content) search](#full-text-content-search)
+  - [Pagination & response shape](#pagination--response-shape)
+- [Relationships](#relationships)
+- [Object reference](#object-reference)
+- [Custom properties](#custom-properties)
+- [Recipes](#recipes)
+- [Migrating from older SDK docs](#migrating-from-older-sdk-docs)
 
 ---
 
-# MCP Tool Input Schemas
+## Object types
 
-This section documents the input schema for each MCP tool available through Day AI.
+These are the types `search_objects` accepts. Every type can also be described with `read_crm_schema`.
 
-## Tool Availability by Tier
+| objectType | What it is | Notes |
+|---|---|---|
+| `native_contact` | People | No `name` property — use `firstName` / `lastName` with `contains` |
+| `native_organization` | Companies | `name` is contains-only; `domain` is exact |
+| `native_opportunity` | Deals | Filter by company with the `subject` relationship |
+| `native_pipeline` | Sales / partner / fundraising pipelines | |
+| `native_stage` | Pipeline stages | Opportunities reference stages via `stageId` |
+| `native_meetingrecording` | Recorded meetings | Transcripts only when `status/latest/code` is `READY` |
+| `native_meetingrecordingclip` | Clips cut from recordings | Fetch by `objectIds` |
+| `native_calendarevent` | Calendar events | Relationship targets are **emails / domains** |
+| `native_emailmessage` | Email messages | Relationship targets are **emails / domains**; replaces `native_gmailthread` |
+| `native_action` | Tasks and follow-ups | |
+| `native_page` | Documents and notes | Bodies aren't indexed — read with `read_page` |
+| `native_context` | Notes attached to records | Usually easier to read inline from the parent (see [Recipes](#read-notes-on-a-record)) |
+| `native_draft` | Email / Slack drafts | |
+| `native_campaign` | Outreach campaigns | Members are `member` / `memberOf` edges to contacts |
+| `native_campaignmemberstatus` | Custom campaign member statuses | |
+| `native_template` | Email, page and knowledge templates | |
+| `native_thread` | Day AI chat threads | Content search returns at most 5 threads |
+| `native_slackchannel` | Slack channels (with summaries) | |
+| `native_slackmessage` | Slack messages | 60-day default lookback |
+| `native_list` | Temporary agent work queues | |
+| `native_file` | Uploaded files | Read contents with `read_file` / `read_csv_file` |
+| `native_folder` | Folders | No relationship filters |
+| `native_view` | Saved table views | Always filter on `objectType` |
+| `native_user` | Workspace members | No `email` property in search |
+| `native_assistant` | Day AI assistants (agents) | |
+| `native_instruction` | Workspace / skill instructions | |
+| `native_webpage` | Web pages Day AI has read | |
+| `native_workspace` | The workspace | Fetch by `objectIds` |
 
-Tools available via MCP depend on the user's assistant tier. Higher tiers include all tools from lower tiers.
+**Not searchable** (but `read_crm_schema` will describe them): comment threads/messages, skills, skillsets, tags, imports, territories, prospecting candidates.
 
-| Tier | Tools Added |
-|------|-------------|
-| **Free** | `search_objects`, `create_or_update_person_organization`, `create_or_update_workspace_context`, `get_meeting_recording_context`, `create_meeting_recording_clip`, `get_share_url`, `read_crm_schema`, `read_page`, `activate_skill`, `deactivate_skill` |
-| **Turbo** | `create_or_update_action`, `create_or_update_relationship`, `create_or_update_list`, `create_page`, `update_page`, `create_email_draft`, `send_notification_mcp`, `assistant_settings`, `manage_skills`, `whoami` |
-| **Professional** | `create_or_update_opportunity`, `create_or_update_custom_property`, `backfill_custom_property`, `analyze_pipeline_metrics`, `create_import_from_file`, `save_import_mapping`, `start_import`, `get_import_progress`, `get_import_errors`, `get_imports_by_object_type`, `analyze_csv`, `read_csv_file`, `read_file`, `transform_csv`, `create_view`, `update_view`, `connect_slack`, `open_email_sharing_rules`, `manage_workspace_members` |
-| **Executive** | `batch_create_or_update_opportunities`, `batch_create_or_update_people_organizations`, `search_prospects` |
+**Deprecated:** `native_gmailthread` and `native_gmailmessage` are still accepted for backwards compatibility but are no longer advertised. Use `native_emailmessage`.
 
-> **Note:** Some tools exist in the platform but are hidden from MCP (internal use only): `web_search`, `day_ai_help`, `send_notification`, `check_workspace_and_user_settings`, `create_or_update_pipeline_stage`, `delete_contact`, `delete_opportunity`, `delete_organization`, `delete_stage_pipeline`, `open_in_app`, `get_context_for_meeting_recording_citations`.
+There are no user-defined object types. Customization happens through [custom properties](#custom-properties).
 
-## Table of Contents
+---
 
-### Search & Query Tools
-- [search_objects](#search_objects) - Primary tool for finding objects with property and relationship filtering
+## objectIds
 
-### CRM Object Management
-- [create_or_update_person_organization](#create_or_update_person_organization)
-- [create_or_update_opportunity](#create_or_update_opportunity)
-- [create_or_update_relationship](#create_or_update_relationship)
-- [create_or_update_custom_property](#create_or_update_custom_property)
+| Type | objectId | How to find it |
+|---|---|---|
+| `native_contact` | UUID | `search_objects` on `email` (exact) or `firstName`/`lastName` (contains) |
+| `native_organization` | UUID | `search_objects` on `domain` (exact) or `name` (contains) |
+| `native_user`, `native_assistant` | UUID | `whoami` for yourself; `search_objects` otherwise |
+| Everything else | Opaque ID (usually UUID) | Whatever a tool returned |
 
-### Content Creation & Management
-- [create_page](#create_page)
-- [update_page](#update_page)
-- [read_page](#read_page) - Read large pages with cursor-based pagination
-- [create_email_draft](#create_email_draft)
-- [create_or_update_workspace_context](#create_or_update_workspace_context)
+References inside properties (`stageId`, `organizationId`, `pipelineId`) are objectIds too.
 
-### Actions & Tasks
-- [create_or_update_action](#create_or_update_action)
+**The one exception is relationship targets on email and calendar types.** `native_emailmessage` and `native_calendarevent` store their participants as email addresses and domains, so relationship filters on those types take an email or domain as `targetObjectId`. See [Relationships](#relationships).
 
-### Lists
-- [create_or_update_list](#create_or_update_list)
-
-### Views & Visualization
-- [create_view](#create_view)
-- [update_view](#update_view)
-
-### Meeting & Recording Tools
-- [get_meeting_recording_context](#get_meeting_recording_context)
-- [create_meeting_recording_clip](#create_meeting_recording_clip)
-
-### Notifications & Communication
-- [send_notification_mcp](#send_notification_mcp) - Send notifications via email or Slack (MCP version)
-
-### Import Tools
-- [create_import_from_file](#create_import_from_file)
-- [save_import_mapping](#save_import_mapping)
-- [start_import](#start_import)
-- [get_import_progress](#get_import_progress)
-- [get_import_errors](#get_import_errors)
-- [get_imports_by_object_type](#get_imports_by_object_type)
-
-### Data & Analysis
-- [analyze_csv](#analyze_csv)
-- [read_csv_file](#read_csv_file)
-- [read_file](#read_file)
-- [transform_csv](#transform_csv)
-- [analyze_pipeline_metrics](#analyze_pipeline_metrics)
-- [backfill_custom_property](#backfill_custom_property)
-
-### Batch Operations
-- [batch_create_or_update_opportunities](#batch_create_or_update_opportunities)
-- [batch_create_or_update_people_organizations](#batch_create_or_update_people_organizations)
-
-### Prospecting
-- [search_prospects](#search_prospects)
-
-### Utility Tools
-- [get_share_url](#get_share_url)
-- [read_crm_schema](#read_crm_schema)
-- [whoami](#whoami)
-
-### Workspace & Settings
-- [assistant_settings](#assistant_settings)
-- [manage_skills](#manage_skills)
-- [activate_skill](#activate_skill)
-- [deactivate_skill](#deactivate_skill)
-- [manage_workspace_members](#manage_workspace_members)
-- [connect_slack](#connect_slack)
-- [open_email_sharing_rules](#open_email_sharing_rules)
+> Always resolve the objectId yourself first. That's the supported pattern, and it works the same way regardless of how many records share an email or domain.
 
 ---
 
 ## search_objects
 
-Search for CRM objects using property filters, relationship queries, and complex conditions. This is the primary tool for finding and retrieving data from Day AI.
+### Request shape
 
-### Input Schema
-
-```typescript
+```jsonc
 {
-  description?: string; // Short (4-5 words) user-friendly description of the search
-
-  queries: Array<{
-    objectType: string; // See "Searchable Object Types" below
-    objectIds?: string[]; // Fetch specific objects by ID (mutually exclusive with 'where')
-    where?: WhereCondition; // Filter conditions (see below)
-  }>;
-
-  // Pagination
-  offset?: number; // Number of results to skip (default: 0)
-
-  // Timeframe filtering
-  timeframeStart?: string; // ISO 8601 datetime or YYYY-MM-DD
-  timeframeEnd?: string; // ISO 8601 datetime or YYYY-MM-DD
-  timeframeField?: 'createdAt' | 'updatedAt' | 'storedAt'; // Default: 'updatedAt'
-
-  // Response control
-  propertiesToReturn?: string[] | '*'; // Property IDs to return, or '*' for all
-  includeRelationships?: boolean; // Include related objects (default: false)
-}
-```
-
-### Searchable Object Types
-
-| Type | Description | Common Use Cases |
-|------|-------------|------------------|
-| `Person` / `native_contact` | Contacts, people | Find people by email, name, company |
-| `Organization` / `native_organization` | Companies | Find companies by domain, industry |
-| `Opportunity` / `native_opportunity` | Deals, prospects | Pipeline management, deal tracking |
-| `Pipeline` / `native_pipeline` | Sales pipelines | Pipeline structure, stage definitions |
-| `Stage` / `native_stage` | Pipeline stages | Stage-based opportunity filtering |
-| `MeetingRecording` / `native_meetingrecording` | Past meetings | Meeting search by attendee, topic |
-| `Action` / `native_action` | Tasks, todos | Task management, follow-ups |
-| `Page` / `native_page` | Documents, notes | Content search |
-| `GmailThread` / `native_gmailthread` | Email threads | Email search by participant |
-| `GmailMessage` / `native_gmailmessage` | Individual emails | Specific message lookup |
-| `Event` / `native_calendarevent` | Calendar events | Future meeting lookup |
-| `Context` / `native_context` | Notes on objects | Find notes attached to records |
-| `Template` / `native_template` | Email templates | Template lookup |
-| `View` / `native_view` | Saved table views | View management |
-| `SlackChannel` / `native_slackchannel` | Slack channels | Channel search |
-| `SlackMessage` / `native_slackmessage` | Slack messages | Message search |
-| `Thread` / `native_thread` | Chat threads | Conversation lookup |
-| `Draft` / `native_draft` | Email drafts | Draft management |
-
-### Where Clause Structure
-
-The `where` field supports two types of conditions:
-
-#### 1. Property-Based Filtering
-
-```typescript
-{
-  propertyId: string;  // Property ID to filter on
-  operator: Operator;  // Comparison operator
-  value?: string;      // Value to compare against (optional for isNull/isNotNull)
-}
-```
-
-**Valid Operators:**
-- `eq` - equals
-- `gt` - greater than
-- `gte` - greater than or equal
-- `lt` - less than
-- `lte` - less than or equal
-- `contains` - string contains
-- `startsWith` - string starts with
-- `endsWith` - string ends with
-- `is` - null check
-- `isNull` - field is null/missing (no value required)
-- `isNotNull` - field has a value (no value required)
-
-#### 2. Relationship-Based Filtering
-
-```typescript
-{
-  relationship: string;       // Relationship name (e.g., "attendee", "related")
-  targetObjectType: string;   // Type of related object
-  targetObjectId: string;     // ID of the target object
-  operator: Operator;
-}
-```
-
-#### 3. Complex Conditions with AND/OR
-
-```typescript
-// AND condition
-{
-  AND: [
-    { propertyId: "ownerEmail", operator: "eq", value: "user@company.com" },
-    { propertyId: "status", operator: "eq", value: "ACTIVE" }
-  ]
-}
-
-// OR condition
-{
-  OR: [
-    { propertyId: "title", operator: "contains", value: "urgent" },
-    { propertyId: "title", operator: "contains", value: "critical" }
-  ]
-}
-```
-
-### Response Format
-
-```typescript
-{
-  offset: number;
-  hasMore?: boolean;
-  nextOffset?: number;
-
-  // Results keyed by object type
-  native_contact?: {
-    totalCount: number;
-    results: Array<{
-      objectId: string;
-      title: string;
-      description?: string;
-      createdAt: string;
-      updatedAt: string;
-      properties?: Record<string, any>;
-      relationships?: Array<{
-        objectType: string;
-        objectId: string;
-        title: string;
-        description?: string;
-        relationship: string;
-      }>;
-    }>;
-  };
-}
-```
-
-### Examples
-
-#### Property-Based Search
-```json
-{
-  "queries": [{
-    "objectType": "native_contact",
-    "where": {
-      "propertyId": "email",
-      "operator": "contains",
-      "value": "@acme.com"
+  "queries": [                          // required — one entry per object type
+    {
+      "objectType": "native_opportunity",
+      "objectIds": ["…"],               // optional — fetch specific records
+      "where": { /* condition */ }      // optional
     }
-  }]
+  ],
+  // Everything below is top-level and applies to every query in the call:
+  "propertiesToReturn": ["title", "stageId", "ownerEmail"],  // omit = defaults, "*" = all
+  "includeRelationships": true,         // default false
+  "timeframeStart": "2026-09-01",       // YYYY-MM-DD or ISO instant with offset
+  "timeframeEnd":   "2026-09-30",
+  "timeframeField": "updatedAt",
+  "offset": 0,
+  "paginationMode": "offset",           // or "cursor"
+  "cursor": null,                       // { objectType, afterId } from nextCursor
+  "cursorPageSize": 200                 // 1–1000, cursor mode only
 }
 ```
 
-#### Relationship Search (Meetings by Attendee)
-```json
+A query entry holds **only** `objectType`, `objectIds` and `where`. Put `propertiesToReturn`, `includeRelationships`, timeframe and pagination parameters at the top level.
+
+- `propertiesToReturn`: by default you get `objectId`, title/name, `updatedAt` and a short description. Use `"*"` sparingly — ask for the specific properties you need on bulk reads.
+- `includeRelationships`: returns connected objects. It's populated for pages of 50 rows or fewer; larger pages return a `_relationshipCount` summary.
+
+### Where clauses & operators
+
+A `where` is one condition, an `AND` of conditions (which may contain one level of `OR`), or an `OR` of conditions:
+
+```jsonc
+// Property condition
+{ "propertyId": "email", "operator": "eq", "value": "jane@acme.com" }
+
+// Relationship condition (never mix with propertyId)
+{ "relationship": "subject", "targetObjectType": "native_organization",
+  "targetObjectId": "6f1c…", "operator": "eq" }
+
+// Combined
+{ "AND": [
+    { "propertyId": "status", "operator": "neq", "value": "COMPLETED" },
+    { "OR": [
+        { "propertyId": "priority", "operator": "eq", "value": "HIGH" },
+        { "propertyId": "type", "operator": "eq", "value": "FOLLOWUP" }
+    ] }
+] }
+```
+
+For anything deeper (an OR of ANDs), send several entries in `queries`.
+
+**Operators:** `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `notContains`, `startsWith`, `endsWith`, `is`, `isAnyOf`, `containsAnyOf`, `containsAllOf`, `isNull`, `isNotNull`. Common synonyms (`equals`, `onOrAfter`, `anyOf`, …) are corrected automatically.
+
+| Property kind | Operators |
+|---|---|
+| Free text (names, titles, descriptions) | **`contains` only** — `eq` / `neq` / `isNull` always fail |
+| Email, phone, exact-match IDs | `eq`, `neq`, `contains`, `startsWith`, `endsWith`, `isNull` |
+| Number, currency, date, datetime | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `isNull` |
+| Boolean | `is` / `eq` with `"true"` or `"false"` |
+| Picklist | `eq`, `neq`, `isAnyOf` (values are option IDs for custom picklists) |
+| Multi-select picklist | `containsAnyOf`, `containsAllOf` |
+
+`read_crm_schema` lists exactly which operators each property supports. Common gotchas:
+
+- Contact `firstName` / `lastName`, organization `name` and opportunity `domain` are **contains-only**.
+- `date` properties (e.g. opportunity `timeframeEnd`) are calendar days: `eq "2026-07-31"` matches the whole UTC day.
+- Array-valued operators (`isAnyOf`, `containsAnyOf`, `containsAllOf`) take a string array as `value`.
+
+### Time ranges
+
+`timeframeStart` / `timeframeEnd` accept a bare `YYYY-MM-DD` (a whole UTC day; the end is inclusive) or an ISO-8601 instant with an offset.
+
+| `timeframeField` | Meaning |
+|---|---|
+| `updatedAt` | Last changed (default for most types) |
+| `createdAt` | Created |
+| `storedAt` | When the record was stored (meeting recordings) |
+| `time` | Sent time — **`native_emailmessage` only**, and its default |
+| `writtenAt` | Search-index write time — **for incremental sync only**, not "recently changed" |
+
+Some types always use their own clock: meeting recordings filter on stored time and calendar events on start time, whatever you pass.
+
+There is no sort parameter. Results come back newest-updated first; calendar events by start time, emails by sent time, and content searches by relevance.
+
+### Full-text (content) search
+
+Filter on the virtual `content` property with `contains` to run a relevance-ranked keyword search with excerpts:
+
+| Type | Searches | Max results |
+|---|---|---|
+| `native_meetingrecording` | Title, summary, notes, transcript | 50 |
+| `native_emailmessage` | Subject, snippet, body | 15 |
+| `native_page` | Titles only (bodies aren't indexed) | — |
+| `native_thread` | Message text | 5 threads × 3 excerpts |
+
+Put all your keywords in **one** `content` condition. A `content` condition inside an `OR` falls back to a plain filter, and cursor pagination isn't supported for content searches.
+
+### Pagination & response shape
+
+Responses are sized to fit a token budget (about 20,000 tokens over MCP), so page size shrinks automatically when you ask for many properties.
+
+```jsonc
 {
-  "queries": [{
-    "objectType": "native_meetingrecording",
-    "where": {
-      "relationship": "attendee",
-      "targetObjectType": "native_contact",
-      "targetObjectId": "john@acme.com",
-      "operator": "eq"
-    }
-  }],
-  "timeframeStart": "2024-01-01",
-  "includeRelationships": true
+  "status": "partial",            // or "complete"
+  "returnedCount": 25,
+  "totalRecords": 312,
+  "totalRecordsIsLowerBound": false,
+  "hasMore": true,
+  "nextOffset": 25,               // pass back as top-level "offset"
+  "paginationNote": "…",
+  "native_opportunity": {
+    "totalCount": 312,
+    "results": [
+      { "objectType": "native_opportunity", "objectId": "…", "title": "…",
+        "description": "…", "properties": { … }, "relationships": [ … ] }
+    ]
+  },
+  "todayNote": "…"
 }
 ```
 
-#### Combined Property + Relationship Filter
-```json
-{
-  "queries": [{
-    "objectType": "native_meetingrecording",
-    "where": {
-      "AND": [
-        {
-          "relationship": "attendee",
-          "targetObjectType": "native_contact",
-          "targetObjectId": "john@acme.com",
-          "operator": "eq"
-        },
-        {
-          "propertyId": "title",
-          "operator": "contains",
-          "value": "demo"
-        }
-      ]
-    }
-  }],
-  "propertiesToReturn": ["notes", "description", "topic"],
-  "includeRelationships": true
-}
-```
+Repeat the same request with `offset = nextOffset` until `status` is `complete`. For scans past 10,000 matches, use `paginationMode: "cursor"` and pass back `nextCursor`. The SDK's [pagination example](examples/pagination-example.ts) walks through offset pagination.
+
+Responses can also carry notes worth surfacing to a model — `visibilityNotes`, `recordingStatus` on meetings, resolved-target notes, and so on.
 
 ---
 
-## create_or_update_person_organization
+## Relationships
 
-Create or update Person and Organization objects in the CRM.
+A relationship condition is `{ relationship, targetObjectType, targetObjectId, operator }`, where `operator` is `eq` (match) or `neq` (exclude). Relationship names are **directional**: use the names listed under the type you're searching.
 
-### Input Schema
+| When searching… | relationship → targetObjectType |
+|---|---|
+| `native_contact` | `organization` → organization · `memberOf` → campaign · `attended` → meetingrecording · `related` → opportunity, action, page, context · `context` → context |
+| `native_organization` | `member` → contact · `opportunity` → opportunity (org is the subject) · `related` → opportunity (other roles), action, page · `attended` → meetingrecording · `context` → context |
+| `native_opportunity` | `subject` → organization (**the company filter**) · `related` → organization, contact, meetingrecording, page, action · `stage` → stage · `assignee` → user · `context` → context |
+| `native_pipeline` | `stage` → stage · `context` → context |
+| `native_stage` | `pipeline` → pipeline · `opportunity` → opportunity · `context` → context |
+| `native_meetingrecording` | `attendee` → contact, organization · `related` → opportunity · `context` → context |
+| `native_calendarevent` | `attendee` → contact (**email**), organization (**domain**) |
+| `native_emailmessage` | `fromRecipient` / `toRecipient` / `ccRecipient` / `bccRecipient` → contact (**email**) · `recipient` → organization (**domain**) |
+| `native_action` | `related` → contact, opportunity, organization · `assignee` → user, assistant |
+| `native_draft` | `hasRecipient` → contact · `creator` → user (yourself only) · `parent` → campaign |
+| `native_campaign` | `generated` → draft · `creator` → user |
+| `native_context` | `parent` → contact, organization, opportunity, meetingrecording, action · `creator` → user |
+| `native_page` | `related` → organization, contact, opportunity · `parent` → context, instruction |
+| `native_instruction` | `content` → page · `creator` → user |
+| `native_user` | `assigned` → opportunity, action · `authored` → context, instruction |
+| `native_assistant` | `assigned` → action · `authored` → context |
 
-```typescript
-{
-  isCreating?: boolean;
-  objectId?: string; // Required for updates
-  objectType: 'Person' | 'Organization';
-  standardProperties?: {
-    // Person properties
-    email?: string;
-    firstName?: string;
-    lastName?: string;
-    phoneNumbers?: string[];
-    jobTitle?: string;
-    linkedInUrl?: string;
+Contacts and organizations also have `canonical` / `alias` edges between merged duplicates.
 
-    // Organization properties
-    domain?: string;
-    name?: string;
-    url?: string;
-    industry?: string;
-    employeeCount?: number;
-    revenue?: number;
-  };
-  customProperties?: Array<{
-    propertyId: string;
-    value: any;
-  }>;
-}
-```
+**`targetObjectId` rules**
 
----
+- Normally it's the **objectId** of the target, from a previous search.
+- On `native_emailmessage` and `native_calendarevent` it's the target's **full email address** (contacts) or **exact domain** (organizations).
+- `native_user` targets are always user UUIDs — never emails.
 
-## create_or_update_opportunity
+Thread, Slack, template, list, file, folder and view types have no searchable relationships. Use their properties instead (e.g. thread `objectReferences contains <objectId>`, Slack `channelId` / `authorEmail`).
 
-Create or update Opportunity objects.
-
-### Input Schema
-
-```typescript
-{
-  isCreating?: boolean;
-  objectId?: string; // Required for updates
-  standardProperties?: {
-    title: string; // Required for creation
-    stageId: string; // Required for creation
-    domain: string; // Required for creation (business domain)
-    ownerEmail?: string; // Must be workspace member
-    expectedRevenue?: number;
-    expectedCloseDate?: string; // ISO date
-    primaryPerson?: string;
-    roles?: Array<{
-      personEmail: string;
-      roles: string[];
-      reasoning?: string;
-    }>;
-  };
-  customProperties?: Array<{
-    propertyId: string;
-    value: any;
-  }>;
-}
-```
+With `includeRelationships: true` on a campaign search, member edges include properties such as `status`, `addedAt`, `sequenceState` and `sequenceNextTouchDueAt`.
 
 ---
 
-## create_page
+## Object reference
 
-Create a new page with formatted content.
+The key properties for each common type. **W** = writable through tools, **R** = read-only (searchable but set by Day AI). This is a summary: `read_crm_schema` is the complete, current list for your workspace.
 
-### Input Schema
+### native_contact
 
-```typescript
-{
-  title: string;
-  pageHtmlContent: string; // HTML content (see formatting rules below)
-  publishedForUserAt?: string; // ISO datetime for sharing, null for private
-  isTemplate?: boolean;
-}
-```
+| Property | Type | | Notes |
+|---|---|---|---|
+| `email` | email | W | Primary email. Optional. **Not** the objectId |
+| `firstName`, `lastName` | text | W | Contains-only |
+| `currentJobTitle`, `currentCompanyName` | text | W | |
+| `currentJobStartDate` | date | W | `YYYY-MM-DD` |
+| `linkedInUrl` | url | W | |
+| `primaryPhoneNumber`, `phoneNumbers` | phone | W | |
+| `location`, `city`, `state`, `country`, `postalCode`, `timezone` | text | W | |
+| `headline`, `description`, `careerSummary`, `industry` | text | W | |
+| `workExperience` | list | W | `{ companyName, title, startDate, endDate, description }`, all optional |
+| `education` | list | W | `{ schoolName, fieldOfStudy, degree, startDate, endDate }`, all optional |
+| `skills`, `languages`, `interests`, `certifications` | list | W | |
+| `lastContactedAt` | datetime | W | |
+| `do_not_sequence`, `email_verification_status` | various | R | Deliverability / suppression |
 
-**HTML Formatting Rules:**
-- Use semantic HTML (h2, h3, p, ul, ol), never h1
-- No inline styles or class attributes
-- Reference CRM objects with `<span data-object-id="id" data-object-type="type">Name</span>`
+To find a contact's company, use the `organization` relationship.
 
----
+### native_organization
 
-## update_page
+| Property | Type | | Notes |
+|---|---|---|---|
+| `name` | text | W | Contains-only |
+| `domain` | text | W | Exact match. Optional. **Not** the objectId |
+| `description`, `aiDescription` | text | W | |
+| `industry` | picklist | W | |
+| `specialities`, `doesBusinessWith` | multi-picklist | W | |
+| `employeeCount` | integer | W | Authoritative; `employeeCountFrom`/`To` are a vendor bracket |
+| `annualRevenue`, `funding` | currency | W | |
+| `founded` | integer | W | |
+| `isHiring` | boolean | W | |
+| `location`, `address`, `city`, `state`, `country`, `postalCode` | text | W | |
+| `status/warmth` | integer 0–100 | W | |
+| `status/highLevelSummary`, `status/currentStatusOneSentence`, `status/nextSteps` | text | W | |
+| `lastContactedAt` | datetime | R | |
+| `hasOpportunity`, `opportunityIds`, `news`, `keywords` | various | R | |
 
-Update an existing page's content or sharing status.
+### native_opportunity
 
-### Input Schema
+| Property | Type | | Notes |
+|---|---|---|---|
+| `title` | text | W | **Required** |
+| `stageId` | reference | W | **Required.** objectId of a `native_stage` |
+| `organizationId` | reference | W | objectId of the subject organization |
+| `domain`, `organizationName` | text | W | Contains-only |
+| `ownerEmail` | email | W | |
+| `timeframeStart`, `timeframeEnd` | date | W | `YYYY-MM-DD` |
+| `roles` | list | W | People and their roles on the deal |
+| `type`, `position`, `stageReasoning`, `pipelineReasoning` | various | W | |
+| `expectedRevenue` | currency | R | Rolled up |
+| `expectedCloseDate` | date | R | |
+| `pipelineId` | reference | R | Filter on stages, not pipelines |
+| `ownerId`, `currentStatus`, `recommendedStage`, `lastContactedAt` | various | R | |
 
-```typescript
-{
-  pageId: string; // Required
-  title?: string;
-  pageHtmlContent?: string;
-  publishedForUserAt?: string | null; // null to make private
-}
-```
+Deprecated and read-only: `amount`, `probability`, `currentSituation`, `goalsAndKPIs`, `challengesAndSolutions`, `primaryPerson`.
 
----
+### native_pipeline
 
-## read_page
+| Property | Type | | Notes |
+|---|---|---|---|
+| `title` | text | W | Required |
+| `type` | enum | W | Required. `NEW_CUSTOMER`, `EXISTING_CUSTOMER`, `FINANCING_INVESTMENT`, `VENTURE_CAPITAL`, `PARTNER` |
+| `hasRevenue` | boolean | W | Required |
+| `icpOrganization`, `icpMetadata` | text | W | Required |
+| `icpPeople`, `description` | text | W | |
 
-Read a large page by object ID with cursor-based pagination. Returns paginated HTML chunks so you can safely read long documents without pulling the entire content into one response.
+### native_stage
 
-For normal-sized pages, `search_objects` with `propertiesToReturn: ['contentHtml']` is simpler. Use `read_page` when you already have the page ID and the content may be large.
+| Property | Type | | Notes |
+|---|---|---|---|
+| `title` | text | W | Required |
+| `type` | enum | W | Required. `AWARENESS`, `CONNECTION`, `NEEDS_IDENTIFICATION`, `PROPOSAL`, `EVALUATION`, `CONSIDERATION_NEGOTIATION`, `CLOSED_WON`, `CLOSED_LOST`, `CUSTOMER_SUCCESS` |
+| `pipelineId` | reference | W | Required, immutable. Filter with `eq` (never `neq`) |
+| `position` | integer | W | Required |
+| `entranceCriteria` | text | W | Required |
+| `likelihoodToClose` | percent | W | |
+| `expectedRevenue` | currency | R | |
 
-### Input Schema
+### native_meetingrecording
 
-```typescript
-{
-  objectId: string; // The Day.ai object ID of the page to read
-  cursor?: string; // Opaque pagination cursor from a previous response. Omit on first call.
-  maxChars?: number; // Max HTML characters per chunk (1000–200000). Optional override for smaller chunks.
-}
-```
+| Property | Type | | Notes |
+|---|---|---|---|
+| `title`, `description`, `topic` | text | W | |
+| `descriptionBullets` | string list | W | |
+| `notes` | long text | W | |
+| `type` | picklist | W | AI-classified meeting type |
+| `storedAt` | datetime | W | |
+| `status/latest/code` | picklist | R | `READY` when the transcript is available |
+| `platform`, `sharedWithWorkspace`, `descriptionLong` | various | R | |
 
-### Pagination
+Filter by participants with the `attendee` relationship only. To read a meeting's transcript and summary, call `get_meeting_recording_context`.
 
-Use `nextCursor` from the response as `cursor` in the next call. Continue while `hasMore` is `true`.
+### native_calendarevent
 
----
+`title`, `description`, `location`, `status`, `startsAt`, `endsAt`, `meetingJoinLink`, `organizerEmail`, `attendees` (`{ email, name, status, isOrganizer, objectId }`), `domains`. Filtering on `attendees contains <email>` and the `attendee` relationship give the same results.
 
-## create_email_draft
+### native_emailmessage
 
-Create or update an email draft.
+All read-only: `subject`, `snippet`, `time` (sent time), `body/text`, `body/html`, `labelIds`, `lastModifiedAt`. Use `timeframeField: "time"` (the default) and the `fromRecipient` / `toRecipient` / `ccRecipient` / `bccRecipient` / `recipient` relationships.
 
-### Input Schema
+### native_action
 
-```typescript
-{
-  description: string; // Purpose of the draft, e.g. "Follow up with Sarah about contract terms"
-  draftId?: string; // ID of existing draft to update (from prior create or search_objects)
-  to?: string[]; // Recipient email addresses (replaces all when updating)
-  cc?: string[]; // CC recipients (replaces all when updating)
-  bcc?: string[]; // BCC recipients (replaces all when updating)
-  from?: string; // Sender email (must be associated with the user)
-  subject?: string; // Email subject
-  body?: string; // HTML body (replaces entire body when updating)
-  threadObjectId?: string; // Day.ai object ID of a Gmail thread to reply to
-  replyAll?: boolean; // Reply-all behavior when replying to a thread
-  actionId?: string; // Action ID to associate with the draft (create only)
-}
-```
+| Property | Type | | Notes |
+|---|---|---|---|
+| `title` | text | W | |
+| `status` | enum | W | Required. `UNREAD`, `READ`, `IN_PROGRESS`, `NEEDS_INPUT`, `SNOOZED`, `DISMISSED`, `REDUNDANT`, `COMPLETED` |
+| `ownerEmail` | email | W | Required |
+| `priority` | enum | W | `HIGH`, `MEDIUM`, `LOW` |
+| `type` | enum | W | `SUPPORT`, `FOLLOWUP`, `MEETINGPREP`, `FEATURE_REQUEST`, `MEETING_RECORDING_FOLLOWUP`, `EMAIL_RESPONSE`, `SCHEDULE_MEETING`, `NUDGE`, `OTHER` |
+| `timeframeEnd` | date | W | Due date |
+| `timeframeStartAt`, `timeframeEndAt` | datetime | W | |
+| `descriptionPoints`, `people`, `domains` | text | W | |
+| `description`, `reasoning`, `sourceType`, `sourceLabel` | text | R | |
 
----
+"My open tasks" = `ownerEmail isAnyOf [all my addresses]` AND `status` not in `COMPLETED`, `DISMISSED`, `REDUNDANT`.
 
-## create_or_update_workspace_context
+### native_page
 
-Create or update context notes for CRM objects or properties.
+`title`, `templateType`, `ownerEmail` (R), `createdAt` (R), `lastUpdatedAt` (R), `publishedForUserAt`. Page bodies aren't in the search index — use `read_page` to read one.
 
-### Input Schema
+### native_draft
 
-```typescript
-{
-  mode: 'create' | 'update';
-  contextId?: string; // Required for update mode
-  plainTextValue: string; // Markdown format content
-  title?: string; // Create only
-  summary?: string; // Create only
-  attachmentType?: 'object' | 'property'; // Required for create
-  objectType?: NativeObjectType; // Required for create
-  objectId?: string; // Required for create
-  propertyId?: string; // Required if attachmentType is 'property'
-}
-```
+All read-only: `email/subject`, `email/from`, `recipients`, `channel` (`EMAIL` / `SLACK`), `type`, `status`, `scheduledSendTime`, `whyNowEvidence`, `draftExplanation`, plus campaign-sequence and bounce fields. Ask for `propertiesToReturn: ["contentHtml", "email/subject", "email/from"]` to get the body.
 
----
+### native_campaign
 
-## create_or_update_action
+Key properties: `title` and `purpose` (required), `populationStatus`, `draftingStatus`, `archivedAt` (`isNull` = active), `sequencingEnabled`, `sendSchedule`, `dailySendLimit`. Use the `get_campaign_details` and `list_campaigns` tools for richer views.
 
-Create or update action items (tasks).
+### Other types
 
-### Input Schema
-
-```typescript
-{
-  actionId?: string; // For updates
-  title?: string; // Required for creates, format: "[Person] needs [action]"
-  assignedToAssistant: boolean; // Required for creates
-  executeAt?: string; // ISO datetime
-  ownerEmail?: string; // Required when assignedToAssistant is false
-  description?: string;
-  descriptionPoints?: string[]; // Preferred over description
-  dueDate?: string; // ISO datetime
-  type?: 'FOLLOW_UP' | 'SUPPORT';
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
-  status?: 'UNREAD' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED';
-  people?: string[]; // Email addresses
-  domains?: string[]; // Organization domains
-  opportunityIds?: string[];
-}
-```
-
----
-
-## create_view
-
-Create custom views for CRM data with filters and sorting.
-
-### Input Schema
-
-```typescript
-{
-  objectType: 'Person' | 'Organization' | 'Opportunity';
-  title: string;
-  description: string;
-  columns?: Array<{
-    field: string;
-    headerName?: string;
-    width?: number;
-    visible?: boolean;
-  }>;
-  filters?: Array<{
-    field: string;
-    operator: 'contains' | 'equals' | 'startsWith' | 'endsWith' | 'isEmpty' |
-              'isNotEmpty' | '>' | '<' | '>=' | '<=' | '!=' | 'is' | 'not' |
-              'after' | 'before' | 'onOrAfter' | 'onOrBefore';
-    value?: any;
-  }>;
-  sorting?: Array<{
-    field: string;
-    sort: 'asc' | 'desc';
-  }>;
-  groupBy?: string[];
-}
-```
+| Type | Key properties |
+|---|---|
+| `native_context` | `summary`. Read notes inline from the parent instead (see [Recipes](#read-notes-on-a-record)) |
+| `native_template` | `type` (`EMAIL`, `INTERNAL_PAGE`, `KNOWLEDGE`), `description`, `descriptionShort`, `skillset`. Request `contentHtml` for the body |
+| `native_thread` | `title`, `status`, `objectReferences` (filter with `contains <objectId>`) |
+| `native_slackmessage` | `body`, `authorEmail`, `authorName`, `authorDomain`, `domains`, `channelName`, `channelId` |
+| `native_slackchannel` | `channelName`, `domains`, `people`, `oneSentenceSummary`, `longSummary`, `summarizedThrough` |
+| `native_campaignmemberstatus` | `label`, `position`, `color` |
+| `native_list` | `title`, `type`, `workQueue` |
+| `native_file` | `title` (filename), `extension` |
+| `native_folder` | `title`, `color`, `emoji`; filter on `section` (`private` / `workspace`) or `parentFolderId` |
+| `native_view` | `objectType` (always filter on it) |
+| `native_user` | `status`, `activatedAt`, `deactivatedAt` |
 
 ---
 
-## get_meeting_recording_context
+## Custom properties
 
-Get context from meeting recordings including transcript and summary. Returns up to ~20k tokens at a time.
-
-By default, returns metadata (title, date, participants) and VTT transcript with token-based pagination. When `fullTranscript` is true, returns the raw JSON transcript in sentence-based format (speaker, timestamps, email, utterance) with cursor-based pagination.
-
-### Input Schema
-
-```typescript
-{
-  meetingRecordingId: string;
-  tokenOffset?: number; // For token-based pagination (default mode), default: 0
-  fullTranscript?: boolean; // When true, return raw JSON transcript with cursor pagination (default: false)
-  cursor?: string; // Opaque pagination cursor for fullTranscript mode. Use nextCursor from previous response.
-}
-```
-
-### Pagination
-
-- **Default mode** (`fullTranscript: false`): Use `nextTokenOffset` from the response as `tokenOffset` in the next call.
-- **Full transcript mode** (`fullTranscript: true`): Use `nextCursor` from the response as `cursor` in the next call.
-
-In both modes, continue paginating while `hasMore` is `true`.
+- Custom properties exist on organizations, opportunities and contacts (mainly).
+- In tools, a custom property's `propertyId` is its **definition UUID**, which `read_crm_schema` lists.
+- Picklist values are **option UUIDs**, not labels. `read_crm_schema` lists the options.
+- Custom `date` properties take `YYYY-MM-DD`.
+- Some custom properties are auto-populated by Day AI from workspace activity or web research. `read_crm_schema` groups them by population mode; leave ones with population turned off alone unless the user asks.
+- Create and backfill them with `create_or_update_custom_property` and `backfill_custom_property`.
 
 ---
 
-## create_meeting_recording_clip
+## Recipes
 
-Create a clip from a meeting recording.
+All recipes are `search_objects` calls. With the SDK, pass them to `client.mcpCallTool('search_objects', …)` or use `client.search(…)`.
 
-### Input Schema
+### Find a contact by email, then their meetings
 
-```typescript
-{
-  meetingRecordingId: string;
-  startSeconds: number;
-  endSeconds: number;
-  title: string;
-  description?: string;
-}
+```jsonc
+// 1. Resolve the contact
+{ "queries": [{ "objectType": "native_contact",
+    "where": { "propertyId": "email", "operator": "eq", "value": "jane@acme.com" } }] }
+
+// 2. Use the returned objectId
+{ "queries": [{ "objectType": "native_meetingrecording",
+    "where": { "relationship": "attendee", "targetObjectType": "native_contact",
+               "targetObjectId": "<contact objectId>", "operator": "eq" } }],
+  "timeframeStart": "2026-07-01" }
 ```
+
+### Open opportunities for a company
+
+```jsonc
+// 1. Resolve the organization
+{ "queries": [{ "objectType": "native_organization",
+    "where": { "propertyId": "domain", "operator": "eq", "value": "acme.com" } }] }
+
+// 2. Filter opportunities by subject
+{ "queries": [{ "objectType": "native_opportunity",
+    "where": { "relationship": "subject", "targetObjectType": "native_organization",
+               "targetObjectId": "<org objectId>", "operator": "eq" } }],
+  "propertiesToReturn": ["title", "stageId", "ownerEmail", "expectedRevenue"] }
+```
+
+To narrow to open deals, look up the pipeline's stages (`native_stage` with `pipelineId eq …`) and filter `stageId isAnyOf [...]` on the non-closed ones.
+
+### Emails with someone (no lookup needed)
+
+```jsonc
+{ "queries": [{ "objectType": "native_emailmessage",
+    "where": { "relationship": "fromRecipient", "targetObjectType": "native_contact",
+               "targetObjectId": "jane@acme.com", "operator": "eq" } }],
+  "timeframeStart": "2026-09-01" }
+```
+
+### Meetings where pricing came up
+
+```jsonc
+{ "queries": [{ "objectType": "native_meetingrecording",
+    "where": { "propertyId": "content", "operator": "contains", "value": "pricing discount renewal" } }],
+  "timeframeStart": "2026-06-01" }
+```
+
+### Read notes on a record
+
+Search the parent with `includeRelationships: true`. Notes come back inline as `noteTitle`, `noteText` and `noteWrittenAt`; when `truncated` is true, pass the note's `pageId` to `read_page` for the full text.
+
+```jsonc
+{ "queries": [{ "objectType": "native_organization", "objectIds": ["<org objectId>"] }],
+  "includeRelationships": true }
+```
+
+### Incremental sync
+
+Use `timeframeField: "writtenAt"` with `timeframeStart` set to when your previous sync started, and `paginationMode: "cursor"`. Record the start time of each run and use it as the next run's `timeframeStart`. Run one full backfill before your first incremental sync.
 
 ---
 
-## send_notification_mcp
+## Migrating from older SDK docs
 
-Send notifications via email or Slack. This is the MCP-exposed version of the notification tool.
-
-### Input Schema
-
-```typescript
-{
-  channel: 'email' | 'slack' | 'both';
-  emailSubject?: string; // Required for email
-  emailBody?: string; // Required for email, HTML format
-  slackFormatting?: 'plain_text' | 'mrkdwn'; // Slack text formatting
-  slackParagraphs?: string[]; // Required for Slack, max 40 paragraphs
-  reasoning: string; // Why sending this notification
-  slackChannelId?: string; // Day.ai ID of Slack channel (optional, defaults to DM)
-}
-```
-
----
-
-## get_share_url
-
-Get a shareable URL for a CRM object.
-
-### Input Schema
-
-```typescript
-{
-  objectId: string;
-  objectType: "native_meetingrecording" | "native_meetingrecordingclip" |
-              "native_pipeline" | "native_view" | "native_page" |
-              "native_thread" | "native_action";
-}
-```
-
----
-
-## create_or_update_custom_property
-
-Create or update custom properties for people, organizations, or opportunities.
-
-### Input Schema
-
-```typescript
-{
-  objectTypeId: 'native_person' | 'native_opportunity' | 'native_organization';
-  propertyTypeId: string; // textarea, integer, float, currency, percent, datetime,
-                          // url, email, phone, boolean, picklist, multipicklist
-  name: string;
-  description: string;
-  aiManaged: boolean; // Whether AI can populate
-  useWeb: boolean; // MUST be false for opportunities
-  options?: Array<{ // Required for picklist/multipicklist
-    name: string;
-    description: string;
-  }>;
-}
-```
-
----
-
-# Pagination
-
-When searching for CRM objects, large result sets are automatically paginated.
-
-## How It Works
-
-- Pagination applies at the **top level** of the response
-- Results paginate when they exceed the 20,000 token limit
-- Use `nextOffset` from the response for the next page
-- Results are no longer capped — keep paginating while `hasMore` is `true` to retrieve all matching objects
-
-## Response Fields
-
-| Field | Location | Type | Description |
-|-------|----------|------|-------------|
-| `offset` | Request | number | Starting position (default: 0) |
-| `hasMore` | Response | boolean | More results available |
-| `nextOffset` | Response | number | Value for next request |
-| `totalCount` | Per object | number | Total results for that type |
-| `results` | Per object | array | Returned objects |
-
-## Example
-
-```typescript
-let offset = undefined;
-let hasMore = true;
-
-while (hasMore) {
-  const response = await client.mcpCallTool('search_objects', {
-    offset,
-    queries: [{ objectType: 'native_contact' }]
-  });
-
-  const data = JSON.parse(response.data?.content[0]?.text);
-  const contacts = data.native_contact?.results || [];
-
-  // Process contacts...
-
-  hasMore = data.hasMore;
-  offset = data.nextOffset;
-}
-```
-
----
-
-# Common Patterns
-
-## Object References
-
-Many tools use object references in the format: `workspaceId : objectType : objectId`
-
-## Date Formats
-
-All dates should be in ISO 8601 format: `YYYY-MM-DDTHH:mm:ssZ`
-
-## Email Validation
-
-Email addresses in owner fields must belong to workspace members.
-
-## Custom Property IDs
-
-- For picklists: Use `custom/{propertyId}/{optionId}`
-- For multipicklists: Create separate updates for each selected option
-
-## HTML Content Rules
-
-When providing HTML content:
-- No inline styles or style attributes
-- Use semantic HTML tags
-- Tables should be clean without styling
-- Reference CRM objects with data attributes
+| Old guidance | Current behavior |
+|---|---|
+| Contact objectId = email; organization objectId = domain | Both are UUIDs. Resolve by `email` / `domain` property first |
+| `targetObjectId: "john@acme.com"` on meeting / opportunity searches | Use the contact or org objectId (emails/domains only on email and calendar types) |
+| `native_gmailthread` for email | `native_emailmessage` |
+| Opportunity company filter via `related` | `subject` |
+| Organization → Opportunity via `involved in`; Organization → Context via `has note` | `opportunity` / `related`; `context` |
+| Meeting `summaryShort`, `summaryLong`, `participants`, `domains`, `statusLabel` | Not exposed. Use `get_meeting_recording_context`, the `attendee` relationship and `status/latest/code` |
+| Opportunity `amount`, `probability`, `expectedRevenue`, `expectedCloseDate` writable | Deprecated or read-only |
+| `workExperience[].jobTitle` | `workExperience[].title` |
+| `send_notification_mcp`, `analyze_pipeline_metrics`, `search_prospects` | Removed from MCP. See [TOOLS.md](TOOLS.md) |

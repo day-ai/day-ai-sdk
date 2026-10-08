@@ -1,5 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { refreshAccessToken, OAuthTokens } from './OAuthService'
 
 export interface MCPToolIcon {
@@ -75,9 +76,7 @@ export async function connectToServer(
       version: '1.0.0',
     },
     {
-      capabilities: {
-        tools: {},
-      },
+      capabilities: {},
     }
   )
 
@@ -206,9 +205,7 @@ async function refreshAndReconnect(connection: MCPServerConnection): Promise<voi
       version: '1.0.0',
     },
     {
-      capabilities: {
-        tools: {},
-      },
+      capabilities: {},
     }
   )
 
@@ -299,10 +296,10 @@ async function executeToolCall(
   toolName: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
-  const result = await connection.client.callTool({
+  const result = (await connection.client.callTool({
     name: toolName,
     arguments: args,
-  })
+  })) as CallToolResult
 
   // Handle the result based on its type
   if (result.isError) {
@@ -385,42 +382,24 @@ export function parseMCPToolName(prefixedName: string): { serverId: string; tool
 }
 
 /**
- * Get connected MCP server configurations for the Claude Agent SDK
- * Returns server URLs with their OAuth access tokens for authenticated access
+ * Get connected MCP server configurations for the Claude Agent SDK, keyed by
+ * server ID. The key becomes the tool prefix: `mcp__<serverId>__<tool>`.
+ * Each entry carries the server's OAuth access token as a bearer header.
  */
-export function getConnectedServersForSDK(): Array<{
-  type: 'http'
-  url: string
-  name: string
-  headers?: Record<string, string>
-}> {
-  const servers: Array<{
-    type: 'http'
-    url: string
-    name: string
-    headers?: Record<string, string>
-  }> = []
+export function getConnectedServersForSDK(): Record<
+  string,
+  { type: 'http'; url: string; headers?: Record<string, string> }
+> {
+  const servers: Record<string, { type: 'http'; url: string; headers?: Record<string, string> }> = {}
 
   for (const connection of connections.values()) {
-    const serverConfig: {
-      type: 'http'
-      url: string
-      name: string
-      headers?: Record<string, string>
-    } = {
+    servers[connection.serverId] = {
       type: 'http',
       url: connection.mcpEndpoint,
-      name: connection.serverId,
+      ...(connection.oauth?.accessToken
+        ? { headers: { Authorization: `Bearer ${connection.oauth.accessToken}` } }
+        : {}),
     }
-
-    // Add OAuth bearer token if available
-    if (connection.oauth?.accessToken) {
-      serverConfig.headers = {
-        Authorization: `Bearer ${connection.oauth.accessToken}`,
-      }
-    }
-
-    servers.push(serverConfig)
   }
 
   return servers

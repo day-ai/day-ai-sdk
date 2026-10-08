@@ -44,9 +44,9 @@ const SYSTEM_PROMPT = `You are a community onboarding agent. A new member is joi
 
 Follow these steps:
 1. Read the CRM schema for native_contact (and native_organization) so you know every available field.
-2. Search for an existing contact by email using search_objects.
-3. Create or update the contact with the information provided using create_or_update_person_organization. Store "How I can help" and "Where I could use help" as notes on the contact.
-4. If they provided a company (from their email domain or LinkedIn), search for and link the organization too.
+2. Search for an existing contact with search_objects, filtering native_contact on the "email" property.
+3. Create or update the contact with create_or_update_person_organization (objectType "native_contact"). To update, pass the objectId the search returned; to create, omit objectId. Never build an objectId from an email address. Store "How I can help" and "Where I could use help" as notes on the contact.
+4. If they provided a company (from their email domain or LinkedIn), search native_organization on the "domain" property and link it using the objectIds the searches returned.
 
 After completing the sync, provide a brief welcome summary: confirm what was saved, and highlight any connections or matches you noticed in the CRM (e.g. other community members at the same company, or people who could help with what they need).`
 
@@ -86,8 +86,8 @@ export async function runAgentLoop(member: CommunityMember, send: SendEvent): Pr
     send({ type: 'status', message: i === 0 ? 'Thinking...' : 'Continuing...' })
 
     const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      model: 'claude-sonnet-5-5',
+      max_tokens: 16000,
       system: SYSTEM_PROMPT,
       messages,
       tools,
@@ -103,17 +103,22 @@ export async function runAgentLoop(member: CommunityMember, send: SendEvent): Pr
 
     const finalMessage = await stream.finalMessage()
 
-    // Build the assistant content blocks for message history
+    // Keep the full content (including thinking blocks) in history
     messages.push({ role: 'assistant', content: finalMessage.content })
 
-    if (finalMessage.stop_reason === 'end_turn') {
+    if (finalMessage.stop_reason === 'refusal') {
+      send({ type: 'error', message: 'Claude declined this request.' })
+      return
+    }
+
+    if (finalMessage.stop_reason !== 'tool_use') {
       if (streamedText) {
         send({ type: 'answer', content: streamedText })
       }
       break
     }
 
-    if (finalMessage.stop_reason === 'tool_use') {
+    {
       const toolResultBlocks: Anthropic.ToolResultBlockParam[] = []
 
       for (const block of finalMessage.content) {
@@ -127,12 +132,14 @@ export async function runAgentLoop(member: CommunityMember, send: SendEvent): Pr
         try {
           const result = await client.mcpCallTool(toolName, toolArgs)
 
-          if (result.success) {
-            send({ type: 'tool_result', name: toolName, success: true })
+          if (result.success && result.data) {
+            const isError = result.data.isError === true
+            send({ type: 'tool_result', name: toolName, success: !isError })
             toolResultBlocks.push({
               type: 'tool_result',
               tool_use_id: block.id,
-              content: JSON.stringify(result.data),
+              content: result.data.content.map((c) => c.text).join('\n'),
+              ...(isError ? { is_error: true } : {}),
             })
           } else {
             send({ type: 'tool_result', name: toolName, success: false })

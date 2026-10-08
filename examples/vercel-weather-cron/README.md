@@ -1,326 +1,126 @@
-# Vercel Weather Cron Demo
+# Vercel Weather Cron
 
-> **Best Way to Get Support**: Run `claude` from the root of this repo to ask questions and get help customizing this app.
+A Next.js app that runs on a schedule with **Vercel Cron Jobs**. Every day at 9:00 AM UTC it fetches the weather and emails it to you through Day AI.
 
-A simple Next.js app that demonstrates **Vercel Cron Jobs** + **Day AI MCP integration**. Every day at 9 AM, this app fetches the weather and emails you via Day AI's `send_notification` tool.
-
-This is a **production-ready template** showing how to build automated workflows that leverage Day AI's capabilities.
-
-## What It Does
-
-1. ⏰ **Cron Job**: Runs daily at 9:00 AM (configured in `vercel.json`)
-2. 🌤️ **Fetch Weather**: Gets current weather from OpenWeather API
-3. 📧 **Send Email**: Uses Day AI's `send_notification` MCP tool to email you
-
-## Why This Pattern Is Powerful
-
-This demonstrates a fundamental automation pattern:
+Swap the weather call for any data source to build daily digests, scheduled reports, alerts or data syncs.
 
 ```
-External Data Source (Weather API)
-          ↓
-    Process/Format
-          ↓
-Day AI MCP Tool (send_notification)
-          ↓
-    User's Email
+Vercel Cron → /api/cron/weather → OpenWeather → Day AI send_notification_mcp → your inbox
 ```
 
-You can adapt this for:
-- **Daily digest emails** (CRM updates, metrics, alerts)
-- **Scheduled reports** (weekly pipeline summaries)
-- **Monitoring alerts** (system health, data changes)
-- **Data enrichment** (sync external data to CRM properties)
+> **Plan note:** the email goes through Day AI's `send_notification_mcp` tool, which is only included in some Day AI plans. If your assistant doesn't have it, the route fails with a message saying so. Check `client.mcpListTools()`, or swap in another tool (for example, `create_or_update_action` to create a task).
 
-## Quick Start
+## Setup
 
-### Prerequisites
+### 1. Day AI credentials
 
-1. **Day AI Account** - Sign up at [day.ai](https://day.ai)
-2. **OpenWeather API Key** - Get free key at [openweathermap.org](https://openweathermap.org/api)
-3. **Vercel Account** - Sign up at [vercel.com](https://vercel.com)
-
-### Setup
-
-#### 1. Get Day AI OAuth Credentials
-
-From the root of the `day-ai-sdk` repo:
+From the repo root:
 
 ```bash
-# Install dependencies
-yarn install
-
-# Run OAuth setup
+yarn install && yarn build
+cp .env.example .env     # set INTEGRATION_NAME
 yarn oauth:setup
 ```
 
-This will:
-- Register your integration with Day AI
-- Open browser for authorization
-- Save credentials to `.env`
+Copy `CLIENT_ID`, `CLIENT_SECRET` and `REFRESH_TOKEN` from the root `.env`.
 
-Copy these values (`CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN`) - you'll need them for Vercel.
+### 2. OpenWeather API key
 
-#### 2. Get OpenWeather API Key
+Sign up at [openweathermap.org/api](https://openweathermap.org/api); the free tier is enough.
 
-1. Go to [openweathermap.org/api](https://openweathermap.org/api)
-2. Sign up for free account
-3. Generate API key (free tier is fine)
-
-#### 3. Deploy to Vercel
-
-Click the button below to deploy:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/day-ai/day-ai-sdk/tree/master/examples/vercel-weather-cron)
-
-During deployment, set these environment variables:
+### 3. Run locally
 
 ```bash
-CLIENT_ID=your-client-id          # From Day AI OAuth setup
-CLIENT_SECRET=your-client-secret  # From Day AI OAuth setup
-REFRESH_TOKEN=your-refresh-token  # From Day AI OAuth setup
-DAY_AI_BASE_URL=https://day.ai    # Default Day AI instance
-
-OPENWEATHER_API_KEY=your-api-key  # From OpenWeather
-
-LOCATION=San Francisco, CA        # Your location (City, State or City, Country)
-
-CRON_SECRET=                      # Optional: Generate with `openssl rand -base64 32`
-```
-
-#### 4. Test It
-
-After deployment:
-
-1. Visit your Vercel app URL
-2. Click **"Send Weather Update Now"**
-3. Check your email!
-
-The cron job will automatically run daily at 9:00 AM.
-
-## Local Development
-
-```bash
-# Install dependencies
+cd examples/vercel-weather-cron
 npm install
-
-# Copy environment template
-cp .env.example .env
-
-# Edit .env with your credentials
-# (Same variables as Vercel deployment)
-
-# Run development server
+cp .env.example .env     # fill in the variables below
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and click the manual sync button to test.
+Open http://localhost:3000 and click **Send Weather Update Now** to test without waiting for the schedule.
 
-## How It Works
+| Variable | Value |
+|---|---|
+| `CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN` | Day AI credentials from step 1 |
+| `DAY_AI_BASE_URL` | Optional, defaults to `https://day.ai` |
+| `OPENWEATHER_API_KEY` | From step 2 |
+| `LOCATION` | e.g. `San Francisco, CA` |
+| `CRON_SECRET` | Recommended in production: `openssl rand -base64 32` |
 
-### File Structure
+### 4. Deploy
 
-```
-vercel-weather-cron/
-├── app/
-│   ├── page.tsx                  # Dashboard UI
-│   ├── layout.tsx                # Root layout
-│   ├── globals.css               # Tailwind CSS
-│   └── api/
-│       ├── cron/
-│       │   └── weather/route.ts  # Cron job endpoint
-│       └── manual-sync/route.ts  # Manual trigger
-├── lib/
-│   ├── dayai.ts                  # Day AI client setup
-│   └── weather.ts                # OpenWeather API
-├── vercel.json                   # Cron configuration
-└── package.json
-```
+Deploy to Vercel (`vercel` from this directory, or import the repo with this folder as the root) and set the same variables in the project settings. Store the Day AI credentials as encrypted environment variables. They grant access to your CRM.
 
-### The Cron Job
+## How it works
 
-`app/api/cron/weather/route.ts` is the heart of the app:
+| File | Role |
+|---|---|
+| `vercel.json` | Cron schedule (`0 9 * * *`) |
+| `app/api/cron/weather/route.ts` | Scheduled endpoint. Checks `CRON_SECRET`, fetches weather, sends the email |
+| `app/api/manual-sync/route.ts` | Same flow, triggered from the dashboard |
+| `lib/dayai.ts` | Creates the `DayAIClient` and wraps `sendNotification()` |
+| `lib/weather.ts` | OpenWeather call and email formatting |
 
-```typescript
-export async function GET(request: NextRequest) {
-  // 1. Fetch weather
-  const weather = await getWeather(location)
-
-  // 2. Initialize Day AI MCP
-  const client = getDayAIClient()
-  await client.mcpInitialize()
-
-  // 3. Send notification
-  await client.mcpCallTool('send_notification', {
-    channel: 'email',
-    emailSubject: `${weather.emoji} Daily Weather Update`,
-    emailBody: formatWeatherEmail(weather),
-    reasoning: 'Daily weather update from Vercel cron job',
-  })
-}
-```
-
-### Cron Schedule
-
-Configured in `vercel.json`:
-
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/weather",
-      "schedule": "0 9 * * *"
-    }
-  ]
-}
-```
-
-This runs at 9:00 AM UTC daily. To change the schedule:
-- `0 9 * * *` - 9:00 AM daily
-- `0 */6 * * *` - Every 6 hours
-- `0 12 * * MON` - Noon every Monday
-
-See [crontab.guru](https://crontab.guru/) for help with cron syntax.
-
-## Customization Ideas
-
-### 1. Different Notifications
-
-Change the `send_notification` call to send Slack messages:
+The core of the cron route:
 
 ```typescript
-await client.mcpCallTool('send_notification', {
-  channel: 'slack',
-  slackParagraphs: [
-    `🌤️ Weather Update for ${weather.location}`,
-    `${weather.temp}°F - ${weather.conditions}`,
-  ],
+const weather = await getWeather(location)
+
+await sendNotification({
+  channel: 'email',
+  emailSubject: `${weather.emoji} Daily Weather Update - ${weather.location}`,
+  emailBody: formatWeatherEmail(weather),
+  reasoning: 'Daily weather update from Vercel cron job',
+})
+```
+
+`sendNotification()` calls `send_notification_mcp` and throws if the tool returns an error.
+
+## Customizing
+
+**Slack instead of email:**
+
+```typescript
+await sendNotification({
+  channel: 'slack', // or 'both'
+  slackParagraphs: [`*Weather for ${weather.location}*\n${weather.temp}°F, ${weather.conditions}`],
   reasoning: 'Weather update via Slack',
 })
 ```
 
-Or both email and Slack:
+Slack requires the Day AI Slack integration. Add `slackChannelId` to post to a channel instead of a DM.
+
+**A daily CRM digest:** query Day AI instead of OpenWeather.
 
 ```typescript
-await client.mcpCallTool('send_notification', {
-  channel: 'both',
-  emailSubject: '...',
-  emailBody: '...',
-  slackParagraphs: ['...'],
-  reasoning: '...',
-})
-```
+const client = getDayAIClient()
+const today = new Date().toISOString().slice(0, 10)
 
-### 2. CRM Data Enrichment
-
-Instead of just sending notifications, update CRM records:
-
-```typescript
-// Search for organizations
-const orgs = await client.mcpCallTool('search_objects', {
-  queries: [{ objectType: 'Organization', take: 100 }],
+const opps = await client.search('native_opportunity', undefined, {
+  timeframeField: 'updatedAt',
+  timeframeStart: today,
+  propertiesToReturn: ['title', 'stageId', 'ownerEmail'],
 })
 
-// Update each org with weather data
-for (const org of orgs.data) {
-  if (org.city) {
-    const weather = await getWeather(org.city)
-    await client.mcpCallTool('create_or_update_person_organization', {
-      objectId: org.id,
-      objectType: 'Organization',
-      customProperties: [{
-        propertyId: 'custom_weather',
-        value: `${weather.emoji} ${weather.temp}°F`,
-      }],
-    })
-  }
-}
-```
-
-### 3. Different Data Sources
-
-Replace the weather API with:
-- **Stock prices** for public companies
-- **News/sentiment** monitoring
-- **Social media** follower counts
-- **Competitor** website changes
-- **Event/conference** schedules
-
-### 4. Daily Digests
-
-Send a summary of CRM activity:
-
-```typescript
-// Get today's opportunities
-const opps = await client.mcpCallTool('search_objects', {
-  queries: [{
-    objectType: 'Opportunity',
-    where: {
-      updatedAt: { dateGt: new Date().toISOString() }
-    }
-  }]
-})
-
-// Format and send
-await client.mcpCallTool('send_notification', {
+await sendNotification({
   channel: 'email',
-  emailSubject: 'Daily CRM Digest',
-  emailBody: formatDigest(opps),
-  reasoning: 'Daily digest email',
+  emailSubject: 'Opportunities updated today',
+  emailBody: `<ul>${opps.native_opportunity.results.map((o: any) => `<li>${o.title}</li>`).join('')}</ul>`,
+  reasoning: 'Daily opportunity digest',
 })
 ```
+
+**Write data back to the CRM:** look records up with `search_objects`, then update them with `create_or_update_person_organization` (`objectType: 'native_organization'`), passing the `objectId` the search returned. Custom property IDs are UUIDs from `read_crm_schema`. See [SCHEMA.md](../../SCHEMA.md) and [TOOLS.md](../../TOOLS.md).
+
+**Let Claude do the work:** for scheduled jobs that need judgment, such as "summarize what changed in my pipeline and flag risks", run a Claude agent from the cron route using the Agent SDK pattern in the [root README](../../README.md#2-build-an-agent), instead of hand-writing each call.
+
+**Schedule:** edit `vercel.json`. For example, `0 */6 * * *` runs every 6 hours and `0 12 * * MON` runs at noon on Mondays (UTC). Vercel's plan limits apply to how often crons can run.
 
 ## Troubleshooting
 
-### "Missing Day AI credentials"
-
-Make sure you've set `CLIENT_ID`, `CLIENT_SECRET`, and `REFRESH_TOKEN` in Vercel environment variables.
-
-### "Location not found"
-
-Check your `LOCATION` environment variable. Format should be:
-- `San Francisco, CA`
-- `New York, NY`
-- `London, UK`
-
-### "OPENWEATHER_API_KEY is not set"
-
-Get a free API key from [openweathermap.org](https://openweathermap.org/api) and add it to your environment variables.
-
-### Cron not running
-
-- Check Vercel dashboard → Cron Jobs tab for logs
-- Cron jobs require a **paid Vercel plan** (Hobby plan includes some crons)
-- Use the manual sync button to test without waiting for the schedule
-
-## Questions & Support
-
-### Using Claude (Recommended)
-
-The **best way to get help** customizing this app:
-
-```bash
-# From the root of the repo
-cd ../../  # if you're in examples/vercel-weather-cron
-claude
-```
-
-Ask Claude anything:
-- "How do I change this to send Slack notifications?"
-- "Show me how to sync weather to organization custom properties"
-- "Help me add a different data source"
-- "How do I change the cron schedule?"
-
-Claude has full context on this codebase and can help you customize, debug, and ship faster.
-
-## Learn More
-
-- [Day AI SDK Documentation](../../README.md)
-- [CLAUDE.md](../../CLAUDE.md) - Quick reference for Claude sessions
-- [SCHEMA.md](../../SCHEMA.md) - Full Day AI object schemas and MCP tools
-- [Vercel Cron Jobs](https://vercel.com/docs/cron-jobs)
-- [OpenWeather API Docs](https://openweathermap.org/api)
-
-## License
-
-MIT - See the main Day AI SDK repository for details.
+| Problem | Fix |
+|---|---|
+| `Missing Day AI credentials` | Set `CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN` |
+| `send_notification_mcp isn't available…` | Your Day AI assistant's plan doesn't include it. See the plan note above |
+| `OPENWEATHER_API_KEY is not set` / `Location not found` | Check the key and use `City, State` or `City, Country` |
+| Cron didn't run | Check the Cron Jobs tab in Vercel. Test with the manual button first |

@@ -33,6 +33,12 @@ Based on their answers, recommend one of our example apps as a starting point:
 - Native tools (CRUD operations on local data)
 - Glass-morphism dark theme
 
+### Agent with no UI (Claude Agent SDK)
+**Use the Agent SDK pattern from the README ("Build an agent") when:**
+- The job is "ask Claude to do something with Day AI data" with no custom UI
+- Scripts, Slack bots, scheduled reports that need judgment
+- Connect Day AI with `mcpServers` and `allowedTools: ['mcp__day-ai__*']`; no tool code needed
+
 ### Serverless Automation (Vercel/Next.js)
 **Use `examples/vercel-weather-cron/` when:**
 - User wants scheduled automation (cron jobs)
@@ -69,9 +75,12 @@ Which Day AI tools will enhance the app?
 - `search_objects` - Find people, orgs, opportunities
 - `get_meeting_recording_context` - Access meeting transcripts
 - `create_or_update_person_organization` - Enrich CRM
-- `send_notification` - Email/Slack notifications
+- `send_notification_mcp` - Email/Slack the user (only on some plans; check `tools/list`)
 - `create_page` - Generate documents
-- See SCHEMA.md for full list
+- `create_email_draft` - Draft emails in the user's Day AI inbox
+- See TOOLS.md for the full list and SCHEMA.md for query syntax
+
+Remember: contacts and organizations are found by `email` / `domain` property first; relationship filters take the returned objectId.
 
 ### D. Design the System Prompt
 How should the AI understand its role?
@@ -177,7 +186,7 @@ The AI bridges both worlds, understanding local app data AND full CRM context.
 - Keep it simple initially
 
 ### Deploy
-- Desktop: Use electron-builder (already configured)
+- Desktop: Add a packager such as electron-builder
 - Vercel: `vercel deploy` or GitHub integration
 - Set environment variables in production
 
@@ -202,7 +211,7 @@ The AI bridges both worlds, understanding local app data AND full CRM context.
 1. **Start simple**: Clone an example, make minimal changes first
 2. **Test iteratively**: Run the app often, see what works
 3. **Focus on tools**: Good tool design = good AI behavior
-4. **Use SCHEMA.md**: Reference for all Day AI MCP tools
+4. **Use TOOLS.md and SCHEMA.md**: Tool inputs, data model and query syntax
 5. **Ask Claude**: Run `claude` for help debugging
 6. **Commit often**: Save progress as you build
 
@@ -215,4 +224,4 @@ After understanding the user's goal:
 4. Test and refine the AI behavior together
 5. Help with deployment when ready
 
-Remember: These templates are production-ready starting points, not just demos. The user should be able to ship a working app in hours, not weeks.
+These templates are starting points: expect to add error handling, secret storage and deployment config before shipping.

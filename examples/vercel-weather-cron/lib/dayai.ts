@@ -1,4 +1,5 @@
 import { DayAIClient } from '../../../src/index'
+import type { SendNotificationInput } from '../../../src/types'
 
 let client: DayAIClient | null = null
 
@@ -21,4 +22,23 @@ export function getDayAIClient(): DayAIClient {
   }
 
   return client
+}
+
+/**
+ * Email or Slack the authorized user via Day AI's send_notification_mcp tool.
+ * That tool is only included in some Day AI plans, so a tier error gets a
+ * clearer message here.
+ */
+export async function sendNotification(input: SendNotificationInput) {
+  try {
+    return await getDayAIClient().sendNotification(input)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (/tier|not available|unknown tool|not found/i.test(message)) {
+      throw new Error(
+        `send_notification_mcp isn't available to the Day AI assistant you authorized (it's only on some plans). Original error: ${message}`
+      )
+    }
+    throw error
+  }
 }

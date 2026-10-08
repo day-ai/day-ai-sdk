@@ -44,8 +44,9 @@ async function main() {
         process.exit(1);
       }
 
-      const toolDir = path.join(__dirname, '../tests/tools', toolName);
-      await runner.runAllTestsInDirectory(toolDir);
+      // Test files are named after the tool, e.g. tests/tools/search-objects.ts
+      const toolFile = path.join(__dirname, '../tests/tools', `${toolName.replace(/_/g, '-')}.js`);
+      await runner.runAllTestsInDirectory(toolFile);
       runner.printSummary();
 
       const results = runner.getResults();
@@ -58,12 +59,18 @@ async function main() {
       if (!filePath) {
         console.error(colorize('Please specify a test file path', 'red'));
         console.log(colorize('Usage: yarn test:file <path>', 'gray'));
-        console.log(colorize('Example: yarn test:file tests/tools/search-objects/search-contacts.ts', 'gray'));
+        console.log(colorize('Example: yarn test:file tests/tools/search-objects.ts', 'gray'));
         process.exit(1);
       }
 
-      const result = await runner.runTestFile(filePath);
-      process.exit(result.passed ? 0 : 1);
+      // Accept the source path (tests/tools/x.ts) and run its compiled output.
+      const compiled = path.join(__dirname, '..', filePath.replace(/^\.\//, '').replace(/\.ts$/, '.js'));
+      await runner.runAllTestsInDirectory(compiled);
+      runner.printSummary();
+
+      const results = runner.getResults();
+      const failed = results.filter((r: any) => !r.passed).length;
+      process.exit(failed > 0 ? 1 : 0);
 
     } else {
       console.log(colorize('Day AI SDK Test Runner\n', 'yellow'));
@@ -74,7 +81,7 @@ async function main() {
       console.log('\nExamples:');
       console.log('  yarn test');
       console.log('  yarn test:tool search-objects');
-      console.log('  yarn test:file tests/tools/search-objects/search-contacts.ts');
+      console.log('  yarn test:file tests/tools/search-objects.ts');
       process.exit(0);
     }
 

@@ -60,7 +60,7 @@ export default function Home() {
             <div className="flex gap-3">
               <span className="text-2xl">📧</span>
               <div>
-                <strong className="text-white">Send Email:</strong> Uses Day AI's <code className="bg-white/10 px-2 py-1 rounded text-sm">send_notification</code> tool
+                <strong className="text-white">Send Email:</strong> Uses Day AI's <code className="bg-white/10 px-2 py-1 rounded text-sm">send_notification_mcp</code> tool
               </div>
             </div>
           </div>

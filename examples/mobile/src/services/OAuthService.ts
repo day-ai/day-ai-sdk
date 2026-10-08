@@ -24,15 +24,16 @@ export interface OAuthTokens {
 
 export interface ClientRegistration {
   clientId: string;
-  clientSecret?: string;
+  clientSecret: string;
 }
 
 const DEFAULT_CONFIG: OAuthConfig = {
   baseUrl: 'https://day.ai',
-  authEndpoint: 'https://day.ai/api/oauth/authorize',
+  authEndpoint: 'https://day.ai/integrations/authorize',
   tokenEndpoint: 'https://day.ai/api/oauth',
   registrationEndpoint: 'https://day.ai/api/oauth/register',
-  scopes: ['read', 'write'],
+  // Day AI's only scope: use the agent the user picks on the consent screen
+  scopes: ['assistant:*:use'],
 };
 
 /**
@@ -55,7 +56,8 @@ export async function registerClient(
       redirect_uris: [redirectUri],
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
-      token_endpoint_auth_method: 'none',
+      // Day AI issues a client secret and expects it on token requests
+      token_endpoint_auth_method: 'client_secret_post',
     }),
   });
 
@@ -65,6 +67,9 @@ export async function registerClient(
   }
 
   const data = await response.json();
+  if (!data.client_id || !data.client_secret) {
+    throw new Error('Client registration did not return a client ID and secret');
+  }
   console.log('[OAuthService] Client registered successfully');
 
   return {
@@ -78,15 +83,8 @@ export async function registerClient(
  */
 export async function startAuthFlow(
   config: OAuthConfig = DEFAULT_CONFIG
-): Promise<{ clientId: string; clientSecret?: string; refreshToken: string }> {
+): Promise<{ clientId: string; clientSecret: string; refreshToken: string }> {
   try {
-    // Check if AuthSession.startAsync is available (native only)
-    if (typeof AuthSession.startAsync !== 'function') {
-      throw new Error(
-        'OAuth flow requires native app (iOS/Android). Web platform is not supported for OAuth.'
-      );
-    }
-
     // OAuth flow is only supported on native platforms (iOS/Android)
     if (Platform.OS === 'web') {
       throw new Error(
@@ -122,17 +120,14 @@ export async function startAuthFlow(
     authUrl.searchParams.set('code_challenge_method', 'S256');
     authUrl.searchParams.set('scope', config.scopes.join(' '));
 
-    // Open browser for authorization (native only)
-    const result = await AuthSession.startAsync({
-      authUrl: authUrl.toString(),
-      returnUrl: redirectUri,
-    });
+    // Open the browser for authorization and wait for the redirect back
+    const result = await WebBrowser.openAuthSessionAsync(authUrl.toString(), redirectUri);
 
     if (result.type !== 'success') {
       throw new Error(`Authorization failed: ${result.type}`);
     }
 
-    const { params } = result;
+    const params = Object.fromEntries(new URL(result.url).searchParams.entries());
 
     // Verify state
     if (params.state !== state) {
@@ -158,6 +153,7 @@ export async function startAuthFlow(
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: client.clientId,
+        client_secret: client.clientSecret,
         code: params.code,
         redirect_uri: redirectUri,
         code_verifier: codeVerifier,

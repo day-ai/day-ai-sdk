@@ -247,6 +247,7 @@ interface StoredChatMessage {
   content: string
   timestamp: string
   thinking?: string
+  rawContent?: ChatMessage['rawContent']
   toolCall?: {
     id: string
     name: string
@@ -363,6 +364,7 @@ ipcMain.handle('chat-send-message', async (_event, noteId: string, message: stri
       content: m.content,
       toolCall: m.toolCall,
       toolResult: m.toolResult,
+      rawContent: m.rawContent,
     }))
 
     const response = await agent.chat(message, context, agentHistory, (chunk: StreamChunk) => {
@@ -414,6 +416,7 @@ ipcMain.handle('chat-execute-tool-and-continue', async (_event, noteId: string, 
       content: m.content,
       toolCall: m.toolCall,
       toolResult: m.toolResult,
+      rawContent: m.rawContent,
     }))
 
     // Continue the conversation with tool result
@@ -569,17 +572,7 @@ ipcMain.handle('mcp-disconnect', async (_event, serverId: string) => {
   const servers = config.mcpServers || []
   const serverConfig = servers.find((s) => s.id === serverId)
 
-  if (serverConfig?.oauth) {
-    try {
-      await OAuthService.revokeToken(
-        `${serverConfig.baseUrl}/api/oauth/revoke`,
-        serverConfig.oauth.clientId,
-        serverConfig.oauth.accessToken
-      )
-    } catch {
-      // Ignore revocation errors
-    }
-  }
+  // Disconnecting clears the locally stored tokens.
 
   // Disconnect MCP client
   await MCPClientService.disconnectServer(serverId)

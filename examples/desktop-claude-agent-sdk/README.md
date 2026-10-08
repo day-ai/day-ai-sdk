@@ -1,10 +1,6 @@
-# Day AI Desktop Demo
+# Day AI Desktop (Claude Agent SDK)
 
-> **Best Way to Get Support**: Run `claude` from the root of this repo to ask questions and get help customizing this app.
-
-A fully-featured Electron app demonstrating how to build an AI-powered desktop application that integrates with Day AI via MCP (Model Context Protocol).
-
-This is **not just a demo** - it's a **production-ready template** you can clone and customize to build your own AI-powered tools in minutes.
+A desktop notes app with a Claude chat that can search and update your Day AI CRM. It's the same app as [`examples/desktop`](../desktop/), but the agent loop runs on the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview) instead of a hand-written tool loop.
 
 ## The "Object-of-Work" Pattern
 
@@ -57,238 +53,95 @@ AI Agent:
 3. Uses local `update_note` tool to write the summary to the note
 ```
 
-## Quick Start
+## How it differs from `examples/desktop`
 
-### Prerequisites
+| | `desktop` | `desktop-claude-agent-sdk` (this one) |
+|---|---|---|
+| Agent loop | Written in `AgentService.ts` with the Anthropic SDK | Run by the Agent SDK's `query()` |
+| Day AI tools | Listed and called by the app | Passed to the SDK as an MCP server; the SDK discovers and calls them |
+| Note tools | Anthropic tool definitions, run by the app's loop | An in-process MCP server (`notes`) built with `createSdkMcpServer()` |
+| Conversation history | Rebuilt by the app each turn | Kept by the SDK, resumed by session ID |
+| Tool permissions | App-defined | `allowedTools: ['mcp__day-ai__*', 'mcp__notes__*']` |
 
-- Node.js 18+
-- An Anthropic API key ([get one here](https://console.anthropic.com))
-- A Day AI account (optional, for MCP integration)
-
-### Installation
-
-```bash
-# Navigate to the demo directory
-cd examples/desktop
-
-# Install dependencies
-yarn install
-
-# Copy environment template
-cp .env.example .env
-
-# Edit .env and add your Anthropic API key
-# ANTHROPIC_API_KEY=sk-ant-...
-
-# Start the app
-yarn dev
-```
-
-### Connecting to Day AI
-
-1. Click the **Settings** icon (gear) in the top bar
-2. Find "Day.ai" under Integrations
-3. Click **Connect**
-4. Complete the OAuth flow in your browser
-5. Return to the app - Day AI tools are now available
-
-Once connected, the AI agent can:
-- Search for people, organizations, and opportunities in Day AI
-- Get rich context about contacts (job history, company info, recent interactions)
-- Access meeting recordings and transcripts
-- Create and update CRM records
-- Draft and send emails
-
-## Architecture
-
-```
-examples/desktop/
-├── electron/
-│   ├── main.ts              # Electron main process + IPC handlers
-│   ├── preload.ts           # Secure IPC bridge
-│   └── services/
-│       ├── AgentService.ts      # Claude chat with streaming + tools
-│       ├── OAuthService.ts      # OAuth 2.0 with PKCE
-│       ├── MCPClientService.ts  # MCP client with token refresh
-│       ├── ToolExecutor.ts      # Executes native + MCP tools
-│       └── tools.ts             # Native tool definitions
-├── src/
-│   ├── App.tsx              # Main React component
-│   ├── components/
-│   │   ├── TopBar.tsx       # Header with controls
-│   │   ├── Sidebar.tsx      # Notes list
-│   │   ├── ChatPane.tsx     # AI chat interface
-│   │   ├── SettingsModal.tsx    # API key + integrations
-│   │   └── NoteEditor.tsx   # Note editing area
-│   └── types/
-│       └── index.ts         # TypeScript definitions
-└── README.md                # This file
-```
-
-### Key Services
-
-| Service | Purpose |
-|---------|---------|
-| `AgentService` | Orchestrates Claude conversations, merges native + MCP tools |
-| `OAuthService` | Handles Day AI OAuth 2.0 flow with PKCE |
-| `MCPClientService` | Maintains MCP connection, handles token refresh |
-| `ToolExecutor` | Routes tool calls to native handlers or MCP |
-
-## Native Tools
-
-The AI agent has these built-in tools for working with notes:
-
-| Tool | Description |
-|------|-------------|
-| `update_note` | Replace the content of the current note |
-| `search_notes` | Search all notes by title/content |
-| `create_note` | Create a new note |
-| `read_note` | Read another note by ID or title |
-
-## Day AI MCP Tools
-
-When connected to Day AI, additional tools become available:
-
-| Tool | Description |
-|------|-------------|
-| `search_objects` | Search for People, Organizations, Opportunities |
-| `get_meeting_recording_context` | Get transcripts and summaries from meetings |
-| `create_or_update_person_organization` | Create/update CRM records |
-| `create_email_draft` | Draft an email |
-| `send_email` | Send an email |
-| And more... | See Day AI SDK documentation |
-
-## Customizing for Your Use Case
-
-### Replacing the "Note" with Your Object
-
-1. **Define your type** in `src/types/index.ts`:
-   ```typescript
-   interface MyObject {
-     id: string
-     // ... your fields
-   }
-   ```
-
-2. **Update native tools** in `electron/services/tools.ts`:
-   ```typescript
-   export const AGENT_TOOLS = [
-     {
-       name: 'update_my_object',
-       description: 'Update the current object...',
-       input_schema: { /* ... */ }
-     }
-   ]
-   ```
-
-3. **Implement tool handlers** in `electron/services/ToolExecutor.ts`
-
-4. **Update UI components** to display your object type
-
-### Adding New Native Tools
-
-1. Add tool definition to `tools.ts`
-2. Add handler to `ToolExecutor.ts`
-3. The agent automatically gets access to the new tool
-
-### Changing the System Prompt
-
-Edit `AgentService.ts` to customize how the AI understands your application:
+The key code is `buildSdkOptions()` in [`electron/services/AgentService.ts`](electron/services/AgentService.ts):
 
 ```typescript
-private buildSystemPrompt(context: NoteContext): string {
-  return `You are an AI assistant for [Your App Name]...`
-}
+query({
+  prompt: message,
+  options: {
+    model: 'sonnet',                          // or e.g. 'claude-sonnet-5-5'
+    mcpServers: {
+      'day-ai': {
+        type: 'http',
+        url: 'https://day.ai/api/mcp',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+      notes: createNotesMcpServer(noteId, onNotesChanged), // in-process note tools
+    },
+    allowedTools: ['mcp__day-ai__*', 'mcp__notes__*'], // auto-approve these servers only
+    tools: [],                                // no shell or file tools in a notes app
+  },
+})
 ```
 
-## Development
+## Prerequisites
+
+- Node.js 18+
+- An Anthropic API key ([console.anthropic.com](https://console.anthropic.com))
+- **Claude Code installed** (`claude` on your PATH). The app runs agents through it; Settings detects the path automatically.
+- A Day AI account (to use the CRM tools)
+
+## Run it
 
 ```bash
-# Start development server
-yarn dev
-
-# Build for production
-yarn build
-
-# Package for distribution
-yarn package
+cd examples/desktop-claude-agent-sdk
+npm install
+cp .env.example .env     # add ANTHROPIC_API_KEY, or enter it in Settings later
+npm run dev
 ```
 
-## How It Works
+Then connect Day AI:
 
-### OAuth 2.0 Flow
+1. Open **Settings** (gear icon) and check the Claude Code path.
+2. Under Integrations, click **Connect** next to Day AI.
+3. Sign in in your browser and pick the workspace and assistant to use.
 
-1. App requests dynamic client registration from Day AI
-2. User is redirected to Day AI authorization page
-3. After approval, Day AI redirects to local callback server
-4. App exchanges authorization code for tokens
-5. Tokens are stored and automatically refreshed
+Back in the app, ask things like *"Who at Acme have I met with this month?"* or *"Add the next steps from today's Acme call to this note."*
 
-### MCP Connection
+## What the agent can use
 
-1. After OAuth, app connects to Day AI's MCP endpoint
-2. MCP client lists available tools
-3. Tools are merged with native tools and provided to Claude
-4. When Claude calls an MCP tool, the call is routed through the MCP client
-5. Token refresh happens automatically if needed
+- **Day AI tools** — everything your assistant's plan includes. See [TOOLS.md](../../TOOLS.md) for the full list and [SCHEMA.md](../../SCHEMA.md) for how to search.
+- **The current note** — its title and contents are added to the system prompt.
+- **Note tools** — `update_note` (edits the open note), `search_notes`, `create_note` and `read_note`. They run in-process as the `notes` MCP server ([`notesMcpServer.ts`](electron/services/notesMcpServer.ts)), which wraps the same handlers the `desktop` example uses. The editor and sidebar refresh after a successful edit or new note.
 
-### Chat Flow
+To add your own tools for a different object of work, add another `tool()` to `createNotesMcpServer()` (or create your own server the same way). `allowedTools` picks up every server in `mcpServers` automatically.
 
-1. User sends message
-2. Message + note context + chat history sent to Claude
-3. Claude streams response (shown in real-time)
-4. If Claude calls a tool:
-   - Tool is executed (native or MCP)
-   - Result is sent back to Claude
-   - Claude continues response
-5. Messages are persisted to chat history
+## Tips for Day AI prompts
+
+- Contacts and companies have UUID objectIds. Have the agent look people up by `email` and companies by `domain` first, then use the returned objectId in relationship filters. Day AI's server instructions tell Claude this automatically.
+- Access tokens last about an hour. The app refreshes them, and each message you send passes the current token to the Agent SDK.
+- Narrow, focused searches work better than broad ones, which can time out.
+
+## Project layout
+
+```
+electron/
+  main.ts                    Electron main process, IPC, chat history
+  services/
+    AgentService.ts          Agent SDK query() setup and streaming
+    MCPClientService.ts      Day AI MCP connection (tool list, token refresh)
+    OAuthService.ts          Day AI OAuth (dynamic registration, browser sign-in)
+    notesMcpServer.ts        Note tools as an in-process MCP server for the Agent SDK
+    ToolExecutor.ts, tools.ts  Note tool handlers and descriptions
+src/                         React UI (notes list, editor, chat, settings)
+```
 
 ## Troubleshooting
 
-### "API key not configured"
+| Problem | Fix |
+|---|---|
+| "Claude Code CLI path not configured" | Install Claude Code, then set or detect the path in Settings |
+| "Anthropic API key not configured" | Add `ANTHROPIC_API_KEY` to `.env` or enter it in Settings |
+| Day AI tools never get called | Check Settings shows Day AI as connected; reconnect if the token was revoked |
+| "not available for your assistant tier" | That tool isn't in your Day AI assistant's plan |
 
-Add your Anthropic API key to `.env` or enter it in Settings.
-
-### OAuth connection fails
-
-- Ensure you're connected to the internet
-- Check that Day AI is accessible
-- Try disconnecting and reconnecting
-
-### MCP tools not appearing
-
-- Verify Day AI connection is active (green icon in Settings)
-- Check console for connection errors
-- Try disconnecting and reconnecting
-
-## Questions & Support
-
-### Using Claude (Recommended)
-
-The **best way to get help** customizing this app:
-
-```bash
-# From the root of the repo
-cd ../../  # if you're in examples/desktop
-claude
-```
-
-Ask Claude anything:
-- "How do I change this notes app to track bugs instead?"
-- "Show me how to add a new native tool"
-- "Help me debug this error: [paste error]"
-- "How do I modify the system prompt?"
-
-Claude has full context on this codebase and can help you customize, debug, and ship faster.
-
-## License
-
-MIT - See the main Day AI SDK repository for details.
-
-## Learn More
-
-- [Day AI SDK Documentation](../../README.md)
-- [CLAUDE.md](../../CLAUDE.md) - Quick reference for Claude sessions
-- [SCHEMA.md](../../SCHEMA.md) - Full Day AI object schemas and MCP tools
-- [Model Context Protocol](https://modelcontextprotocol.io)
-- [Anthropic API Documentation](https://docs.anthropic.com)

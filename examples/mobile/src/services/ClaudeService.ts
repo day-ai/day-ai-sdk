@@ -2,6 +2,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Platform } from 'react-native';
 import type { ChatMessage } from '../types';
+import { DEFAULT_MODEL } from '../types';
 
 interface StreamChunk {
   type: 'text' | 'tool_use' | 'error' | 'done';
@@ -16,7 +17,7 @@ interface StreamChunk {
 
 export class ClaudeService {
   private client: Anthropic | null = null;
-  private model: string = 'claude-sonnet-4-20250514';
+  private model: string = DEFAULT_MODEL;
 
   constructor(apiKey?: string) {
     if (apiKey) {
@@ -88,7 +89,7 @@ export class ClaudeService {
 
     const requestParams: any = {
       model: this.model,
-      max_tokens: 4096,
+      max_tokens: 16000,
       system: this.getSystemPrompt(!!tools),
       messages,
     };
@@ -109,18 +110,18 @@ export class ClaudeService {
               text: event.delta.text,
             };
           }
-        } else if (event.type === 'content_block_start') {
-          if (event.content_block.type === 'tool_use') {
-            yield {
-              type: 'tool_use',
-              toolCall: {
-                id: event.content_block.id,
-                name: event.content_block.name,
-                input: event.content_block.input,
-              },
-            };
-          }
         } else if (event.type === 'message_stop') {
+          // Tool inputs stream in as partial JSON, so read complete tool calls
+          // from the final message rather than from content_block_start.
+          const finalMessage = await stream.finalMessage();
+          for (const block of finalMessage.content) {
+            if (block.type === 'tool_use') {
+              yield {
+                type: 'tool_use',
+                toolCall: { id: block.id, name: block.name, input: block.input },
+              };
+            }
+          }
           yield { type: 'done' };
         }
       }
@@ -144,7 +145,7 @@ export class ClaudeService {
 
     const requestBody: any = {
       model: this.model,
-      max_tokens: 4096,
+      max_tokens: 16000,
       system: this.getSystemPrompt(!!tools),
       messages,
       stream: true,
@@ -167,6 +168,7 @@ export class ClaudeService {
     apiKey?: string
   ): AsyncGenerator<StreamChunk> {
     const chunks: StreamChunk[] = [];
+    const pendingTools = new Map<number, { id: string; name: string; json: string }>();
     let isComplete = false;
     let hasError: Error | null = null;
 
@@ -204,16 +206,32 @@ export class ClaudeService {
                   type: 'text',
                   text: parsed.delta.text,
                 });
+              } else if (parsed.delta?.type === 'input_json_delta') {
+                const pending = pendingTools.get(parsed.index);
+                if (pending) pending.json += parsed.delta.partial_json ?? '';
               }
             } else if (parsed.type === 'content_block_start') {
               if (parsed.content_block?.type === 'tool_use') {
+                // Tool inputs arrive as partial JSON deltas; emit on block stop.
+                pendingTools.set(parsed.index, {
+                  id: parsed.content_block.id,
+                  name: parsed.content_block.name,
+                  json: '',
+                });
+              }
+            } else if (parsed.type === 'content_block_stop') {
+              const pending = pendingTools.get(parsed.index);
+              if (pending) {
+                pendingTools.delete(parsed.index);
+                let input: any = {};
+                try {
+                  input = pending.json ? JSON.parse(pending.json) : {};
+                } catch {
+                  console.warn('[ClaudeService] Could not parse tool input for', pending.name);
+                }
                 chunks.push({
                   type: 'tool_use',
-                  toolCall: {
-                    id: parsed.content_block.id,
-                    name: parsed.content_block.name,
-                    input: parsed.content_block.input,
-                  },
+                  toolCall: { id: pending.id, name: pending.name, input },
                 });
               }
             } else if (parsed.type === 'message_stop') {

@@ -28,14 +28,22 @@ export interface ChatMessage {
   content: string
   toolCall?: ToolCall
   toolResult?: ToolResult
+  // The model's full response blocks (including thinking). Sent back verbatim
+  // on later turns; older saved messages may not have it.
+  rawContent?: Anthropic.ContentBlockParam[]
 }
 
 export interface AgentResponse {
   thinking?: string
   content: string
   toolCall?: ToolCall
-  stopReason: 'end_turn' | 'tool_use' | 'max_tokens'
+  stopReason: Anthropic.StopReason | null
+  rawContent: Anthropic.ContentBlockParam[]
 }
+
+const MODEL = 'claude-sonnet-5-5'
+// Thinking counts toward max_tokens, so leave room beyond the visible reply.
+const MAX_TOKENS = 16000
 
 export type StreamChunk = { type: 'text'; content: string } | { type: 'thinking'; content: string }
 
@@ -64,11 +72,13 @@ export class AgentService {
 
     const stream = await this.client.messages.stream(
       {
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
         system: systemPrompt,
         messages,
         tools: allTools,
+        // The app runs one tool per turn, so ask for at most one tool call.
+        tool_choice: { type: 'auto', disable_parallel_tool_use: true },
       },
       {
         signal: this.abortController.signal,
@@ -105,11 +115,16 @@ export class AgentService {
       }
     }
 
+    if (finalMessage.stop_reason === 'refusal' && !content) {
+      content = "Claude declined to help with this request. Try rephrasing it."
+    }
+
     return {
       thinking: thinking || undefined,
       content,
       toolCall,
-      stopReason: finalMessage.stop_reason as 'end_turn' | 'tool_use' | 'max_tokens',
+      stopReason: finalMessage.stop_reason,
+      rawContent: finalMessage.content as Anthropic.ContentBlockParam[],
     }
   }
 
@@ -130,11 +145,13 @@ export class AgentService {
 
     const stream = await this.client.messages.stream(
       {
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
         system: systemPrompt,
         messages,
         tools: allTools,
+        // The app runs one tool per turn, so ask for at most one tool call.
+        tool_choice: { type: 'auto', disable_parallel_tool_use: true },
       },
       {
         signal: this.abortController.signal,
@@ -171,11 +188,16 @@ export class AgentService {
       }
     }
 
+    if (finalMessage.stop_reason === 'refusal' && !content) {
+      content = "Claude declined to help with this request. Try rephrasing it."
+    }
+
     return {
       thinking: thinking || undefined,
       content,
       toolCall,
-      stopReason: finalMessage.stop_reason as 'end_turn' | 'tool_use' | 'max_tokens',
+      stopReason: finalMessage.stop_reason,
+      rawContent: finalMessage.content as Anthropic.ContentBlockParam[],
     }
   }
 
@@ -237,48 +259,8 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
   }
 
   private buildMessages(history: ChatMessage[], newMessage: string): Anthropic.MessageParam[] {
-    const messages: Anthropic.MessageParam[] = []
-
-    for (const msg of history) {
-      if (msg.role === 'user') {
-        messages.push({ role: 'user', content: msg.content })
-      } else {
-        // Build assistant message with potential tool use
-        const content: Anthropic.ContentBlockParam[] = []
-        if (msg.content) {
-          content.push({ type: 'text', text: msg.content })
-        }
-        if (msg.toolCall) {
-          content.push({
-            type: 'tool_use',
-            id: msg.toolCall.id,
-            name: msg.toolCall.name,
-            input: msg.toolCall.parameters,
-          })
-        }
-        if (content.length > 0) {
-          messages.push({ role: 'assistant', content })
-        }
-
-        // If there's a tool result, add it
-        if (msg.toolResult) {
-          messages.push({
-            role: 'user',
-            content: [
-              {
-                type: 'tool_result',
-                tool_use_id: msg.toolResult.toolCallId,
-                content: JSON.stringify(msg.toolResult.result || { error: msg.toolResult.error }),
-              },
-            ],
-          })
-        }
-      }
-    }
-
-    // Add the new user message
+    const messages = this.buildHistory(history)
     messages.push({ role: 'user', content: newMessage })
-
     return messages
   }
 
@@ -286,46 +268,7 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
     history: ChatMessage[],
     toolResult: ToolResult
   ): Anthropic.MessageParam[] {
-    const messages: Anthropic.MessageParam[] = []
-
-    for (const msg of history) {
-      if (msg.role === 'user') {
-        messages.push({ role: 'user', content: msg.content })
-      } else {
-        // Build assistant message with potential tool use
-        const content: Anthropic.ContentBlockParam[] = []
-        if (msg.content) {
-          content.push({ type: 'text', text: msg.content })
-        }
-        if (msg.toolCall) {
-          content.push({
-            type: 'tool_use',
-            id: msg.toolCall.id,
-            name: msg.toolCall.name,
-            input: msg.toolCall.parameters,
-          })
-        }
-        if (content.length > 0) {
-          messages.push({ role: 'assistant', content })
-        }
-
-        // If there's a tool result already, add it
-        if (msg.toolResult) {
-          messages.push({
-            role: 'user',
-            content: [
-              {
-                type: 'tool_result',
-                tool_use_id: msg.toolResult.toolCallId,
-                content: JSON.stringify(msg.toolResult.result || { error: msg.toolResult.error }),
-              },
-            ],
-          })
-        }
-      }
-    }
-
-    // Add the new tool result
+    const messages = this.buildHistory(history)
     messages.push({
       role: 'user',
       content: [
@@ -336,6 +279,53 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
         },
       ],
     })
+    return messages
+  }
+
+  private buildHistory(history: ChatMessage[]): Anthropic.MessageParam[] {
+    const messages: Anthropic.MessageParam[] = []
+
+    for (const msg of history) {
+      if (msg.role === 'user') {
+        messages.push({ role: 'user', content: msg.content })
+        continue
+      }
+
+      if (msg.rawContent?.length) {
+        // Send the model's own blocks back unchanged, thinking included.
+        messages.push({ role: 'assistant', content: msg.rawContent })
+      } else {
+        // Messages saved before rawContent existed: rebuild from text + tool call.
+        const content: Anthropic.ContentBlockParam[] = []
+        if (msg.content) {
+          content.push({ type: 'text', text: msg.content })
+        }
+        if (msg.toolCall) {
+          content.push({
+            type: 'tool_use',
+            id: msg.toolCall.id,
+            name: msg.toolCall.name,
+            input: msg.toolCall.parameters,
+          })
+        }
+        if (content.length > 0) {
+          messages.push({ role: 'assistant', content })
+        }
+      }
+
+      if (msg.toolResult) {
+        messages.push({
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: msg.toolResult.toolCallId,
+              content: JSON.stringify(msg.toolResult.result || { error: msg.toolResult.error }),
+            },
+          ],
+        })
+      }
+    }
 
     return messages
   }

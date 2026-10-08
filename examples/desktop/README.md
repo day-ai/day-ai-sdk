@@ -2,9 +2,9 @@
 
 > **Best Way to Get Support**: Run `claude` from the root of this repo to ask questions and get help customizing this app.
 
-A fully-featured Electron app demonstrating how to build an AI-powered desktop application that integrates with Day AI via MCP (Model Context Protocol).
+An Electron notes app with a Claude chat panel that can read and edit your notes *and* search your Day AI CRM through MCP (Model Context Protocol).
 
-This is **not just a demo** - it's a **production-ready template** you can clone and customize to build your own AI-powered tools in minutes.
+It's a starting template: clone it, swap "notes" for your own kind of object, and you have an AI tool wired into Day AI. Expect to add your own error handling and packaging before you ship it.
 
 ## The "Object-of-Work" Pattern
 
@@ -52,16 +52,16 @@ The pattern works like this:
 User: "Update this note with context about John Smith from my last meeting"
 
 AI Agent:
-1. Uses Day AI's `search_objects` tool to find John Smith
-2. Uses Day AI's `get_meeting_recording_context` to find recent meetings
-3. Uses local `update_note` tool to write the summary to the note
+1. Uses Day AI's `search_objects` to find the contact (firstName/lastName contains "John" / "Smith")
+2. Searches meetings with that contact's objectId, then reads the latest with `get_meeting_recording_context`
+3. Uses the local `update_note` tool to write the summary into the note
 ```
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - An Anthropic API key ([get one here](https://console.anthropic.com))
 - A Day AI account (optional, for MCP integration)
 
@@ -97,7 +97,9 @@ Once connected, the AI agent can:
 - Get rich context about contacts (job history, company info, recent interactions)
 - Access meeting recordings and transcripts
 - Create and update CRM records
-- Draft and send emails
+- Draft emails
+
+Which Day AI tools appear depends on the plan of the Day AI assistant you pick when connecting.
 
 ## Architecture
 
@@ -108,7 +110,7 @@ examples/desktop/
 │   ├── preload.ts           # Secure IPC bridge
 │   └── services/
 │       ├── AgentService.ts      # Claude chat with streaming + tools
-│       ├── OAuthService.ts      # OAuth 2.0 with PKCE
+│       ├── OAuthService.ts      # Day AI OAuth (dynamic registration + refresh)
 │       ├── MCPClientService.ts  # MCP client with token refresh
 │       ├── ToolExecutor.ts      # Executes native + MCP tools
 │       └── tools.ts             # Native tool definitions
@@ -130,7 +132,7 @@ examples/desktop/
 | Service | Purpose |
 |---------|---------|
 | `AgentService` | Orchestrates Claude conversations, merges native + MCP tools |
-| `OAuthService` | Handles Day AI OAuth 2.0 flow with PKCE |
+| `OAuthService` | Handles the Day AI OAuth flow and token refresh |
 | `MCPClientService` | Maintains MCP connection, handles token refresh |
 | `ToolExecutor` | Routes tool calls to native handlers or MCP |
 
@@ -151,12 +153,13 @@ When connected to Day AI, additional tools become available:
 
 | Tool | Description |
 |------|-------------|
-| `search_objects` | Search for People, Organizations, Opportunities |
+| `search_objects` | Search contacts, companies, opportunities, meetings, emails and more |
+| `read_crm_schema` | See the properties and relationships available in your workspace |
 | `get_meeting_recording_context` | Get transcripts and summaries from meetings |
-| `create_or_update_person_organization` | Create/update CRM records |
+| `create_or_update_person_organization` | Create or update contacts and companies |
 | `create_email_draft` | Draft an email |
-| `send_email` | Send an email |
-| And more... | See Day AI SDK documentation |
+
+See [TOOLS.md](../../TOOLS.md) for the full list and [SCHEMA.md](../../SCHEMA.md) for how searches work. One rule worth knowing: contacts and companies are found by their `email` / `domain` property first, and relationship searches then use the returned objectId.
 
 ## Customizing for Your Use Case
 
@@ -191,6 +194,10 @@ When connected to Day AI, additional tools become available:
 2. Add handler to `ToolExecutor.ts`
 3. The agent automatically gets access to the new tool
 
+### Changing the Model
+
+The app uses `claude-sonnet-5-5`. Change `MODEL` at the top of `electron/services/AgentService.ts` — for example to `claude-opus-5-5` for heavier research tasks.
+
 ### Changing the System Prompt
 
 Edit `AgentService.ts` to customize how the AI understands your application:
@@ -207,22 +214,24 @@ private buildSystemPrompt(context: NoteContext): string {
 # Start development server
 yarn dev
 
-# Build for production
+# Type-check and build
 yarn build
 
-# Package for distribution
-yarn package
+# Package for distribution (config is in package.json)
+npx electron-builder
 ```
 
 ## How It Works
 
 ### OAuth 2.0 Flow
 
-1. App requests dynamic client registration from Day AI
-2. User is redirected to Day AI authorization page
-3. After approval, Day AI redirects to local callback server
-4. App exchanges authorization code for tokens
-5. Tokens are stored and automatically refreshed
+1. App registers itself with Day AI (dynamic client registration)
+2. You sign in to Day AI in your browser and pick a workspace and assistant
+3. Day AI redirects to a local callback server
+4. App exchanges the authorization code for tokens
+5. Tokens are stored locally and refreshed automatically
+
+Disconnecting forgets the tokens on this machine. To remove the app's access entirely, remove the integration in Day AI's settings.
 
 ### MCP Connection
 
@@ -237,11 +246,11 @@ yarn package
 1. User sends message
 2. Message + note context + chat history sent to Claude
 3. Claude streams response (shown in real-time)
-4. If Claude calls a tool:
+4. If Claude calls a tool (one per turn):
    - Tool is executed (native or MCP)
    - Result is sent back to Claude
    - Claude continues response
-5. Messages are persisted to chat history
+5. Messages are persisted to chat history, including Claude's full response blocks (thinking included), which are sent back unchanged on later turns
 
 ## Troubleshooting
 
@@ -289,6 +298,7 @@ MIT - See the main Day AI SDK repository for details.
 
 - [Day AI SDK Documentation](../../README.md)
 - [CLAUDE.md](../../CLAUDE.md) - Quick reference for Claude sessions
-- [SCHEMA.md](../../SCHEMA.md) - Full Day AI object schemas and MCP tools
+- [SCHEMA.md](../../SCHEMA.md) - Day AI data model and search syntax
+- [TOOLS.md](../../TOOLS.md) - Every Day AI MCP tool and its inputs
 - [Model Context Protocol](https://modelcontextprotocol.io)
-- [Anthropic API Documentation](https://docs.anthropic.com)
+- [Claude API documentation](https://platform.claude.com/docs)

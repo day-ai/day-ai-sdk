@@ -135,7 +135,9 @@ const api = {
   onFullscreenChange: (callback: (isFullscreen: boolean) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, isFullscreen: boolean) => callback(isFullscreen)
     ipcRenderer.on('fullscreen-change', handler)
-    return () => ipcRenderer.removeListener('fullscreen-change', handler)
+    return () => {
+      ipcRenderer.removeListener('fullscreen-change', handler)
+    }
   },
 
   // Config API
@@ -159,18 +161,24 @@ const api = {
     onAgentMessage: (callback: (msg: AgentIPCMessage) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, msg: AgentIPCMessage) => callback(msg)
       ipcRenderer.on('agent-message', handler)
-      return () => ipcRenderer.removeListener('agent-message', handler)
+      return () => {
+      ipcRenderer.removeListener('agent-message', handler)
+    }
     },
     // Note update notifications (triggered by tool execution)
     onNoteUpdated: (callback: (noteId: string) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, noteId: string) => callback(noteId)
       ipcRenderer.on('note-updated', handler)
-      return () => ipcRenderer.removeListener('note-updated', handler)
+      return () => {
+      ipcRenderer.removeListener('note-updated', handler)
+    }
     },
     onNotesChanged: (callback: () => void) => {
       const handler = () => callback()
       ipcRenderer.on('notes-changed', handler)
-      return () => ipcRenderer.removeListener('notes-changed', handler)
+      return () => {
+      ipcRenderer.removeListener('notes-changed', handler)
+    }
     },
   },
 

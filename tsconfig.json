@@ -18,11 +18,16 @@
   "include": [
     "src/**/*",
     "scripts/**/*",
-    "tests/**/*"
+    "tests/**/*",
+    "examples/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "examples"
+    "examples/community-builder",
+    "examples/desktop",
+    "examples/desktop-claude-agent-sdk",
+    "examples/mobile",
+    "examples/vercel-weather-cron"
   ]
 }

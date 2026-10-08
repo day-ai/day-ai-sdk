@@ -14,6 +14,7 @@ import { Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassView } from './GlassView';
+import { DEFAULT_MODEL } from '../types';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface SettingsSheetProps {
@@ -38,9 +39,7 @@ export function SettingsSheet({
   onDisconnectDayAI,
 }: SettingsSheetProps) {
   const [apiKey, setApiKey] = useState(currentApiKey);
-  const [selectedModel, setSelectedModel] = useState<string>(
-    'claude-sonnet-4-20250514'
-  );
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Day AI connection state
@@ -80,14 +79,19 @@ export function SettingsSheet({
 
   const models = [
     {
-      id: 'claude-sonnet-4-20250514',
-      name: 'Sonnet 4.5',
+      id: 'claude-sonnet-5-5',
+      name: 'Sonnet 5.5',
       description: 'Fast and intelligent',
     },
     {
-      id: 'claude-opus-4-20250514',
-      name: 'Opus 4.5',
+      id: 'claude-opus-5-5',
+      name: 'Opus 5.5',
       description: 'Most powerful',
+    },
+    {
+      id: 'claude-haiku-5-5',
+      name: 'Haiku 5.5',
+      description: 'Fastest and cheapest',
     },
   ];
 

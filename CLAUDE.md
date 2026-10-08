@@ -25,233 +25,91 @@ Day AI Platform (AI-native CRM)
 Contacts, Opportunities, Meetings, Pages, etc.
 ```
 
-## Key Components
+The platform is a remote MCP server at `https://day.ai/api/mcp`. Claude (web, desktop, Claude Code) can also connect to it directly as a connector, with no SDK in between.
 
-### Core SDK (`src/`)
-- **DayAIClient**: OAuth 2.0 with auto token refresh
-- **Convenience methods**: `search()`, `createPerson()`, `createOrganization()`, `createOpportunity()`, `sendNotification()`, `keywordSearch()` — typed wrappers that return parsed results
-- **Raw MCP access**: `searchObjects()`, `findMeetingsByAttendee()` return raw `ApiResponse<McpToolResult>` for full control; `mcpCallTool()` is the escape hatch for any tool
-- **Types**: `src/types.ts` exports `ObjectType`, `WhereCondition`, `SearchOptions`, `SearchResponse`, and input types for all convenience methods
-- Full TypeScript types and error handling
+## The Object-of-Work Pattern
 
-### Example 1: Desktop App (`examples/desktop/`)
-- **Electron** app with React + TypeScript + Tailwind
-- **Left sidebar**: Notes list (CRUD operations)
-- **Center**: Rich text editor for notes
-- **Right sidebar**: Claude AI chat with streaming
-- **MCP Integration**: AI agent can query Day AI CRM via MCP tools
-- **Native Tools**: AI can read/update notes directly
-
-This is a **template** - clone it to build bug trackers, opportunity managers, meeting prep tools, etc.
-
-### Example 2: Vercel Weather Cron (`examples/vercel-weather-cron/`)
-- **Next.js** app with Vercel Cron Jobs
-- **Automated workflow**: Fetches weather daily at 9 AM
-- **Email notification**: Uses Day AI's `send_notification` MCP tool
-- **Simple dashboard**: Manual trigger and status display
-- **Zero server management**: Runs on Vercel's edge
-
-This is a **template** - clone it to build daily digests, scheduled reports, monitoring alerts, data enrichment crons, etc.
-
-## File Structure
-
-```
-day-ai-sdk/
-├── src/                 # Core SDK
-│   ├── client.ts        # DayAIClient (OAuth + MCP + convenience methods)
-│   ├── types.ts         # TypeScript types (ObjectType, WhereCondition, inputs, responses)
-│   └── index.ts         # Re-exports
-├── examples/
-│   ├── desktop/         # Electron notes app (template)
-│   │   ├── electron/    # Main process (IPC, services)
-│   │   │   ├── main.ts
-│   │   │   └── services/
-│   │   │       ├── AgentService.ts      # Claude SDK integration
-│   │   │       ├── OAuthService.ts      # Day AI OAuth
-│   │   │       ├── MCPClientService.ts  # MCP client
-│   │   │       └── ToolExecutor.ts      # Native + MCP tool execution
-│   │   └── src/         # Renderer (React UI)
-│   │       ├── App.tsx
-│   │       └── components/
-│   └── vercel-weather-cron/  # Vercel cron automation (template)
-│       ├── app/
-│       │   ├── page.tsx             # Dashboard UI
-│       │   └── api/
-│       │       ├── cron/weather/    # Cron job endpoint
-│       │       └── manual-sync/     # Manual trigger
-│       ├── lib/
-│       │   ├── dayai.ts             # Day AI client
-│       │   └── weather.ts           # Weather API
-│       └── vercel.json              # Cron config
-├── scripts/
-│   └── oauth-setup.ts   # CLI OAuth wizard
-└── SCHEMA.md            # Day AI object schemas
-```
-
-## Common Tasks
-
-### Run the Desktop Example
-```bash
-cd examples/desktop
-npm install
-npm run dev
-```
-
-### Run the Vercel Example Locally
-```bash
-cd examples/vercel-weather-cron
-npm install
-npm run dev
-# Visit http://localhost:3000
-```
-
-### Deploy Vercel Example
-```bash
-cd examples/vercel-weather-cron
-vercel
-# Set environment variables in Vercel dashboard
-```
-
-### Add/Modify Features
-- **Add native tools**: Edit `electron/services/tools.ts`
-- **Modify UI**: Edit `src/components/`
-- **Change agent behavior**: Edit `electron/services/AgentService.ts`
-
-### Build New Apps from Template
-1. Copy `examples/desktop/` to a new directory
-2. Rename "notes" to your object type (bugs, tasks, etc.)
-3. Update tools and UI for your use case
-4. Day AI MCP integration works out of the box
-
-## Using the SDK
-
-### Convenience Methods (recommended for most use cases)
-```typescript
-// Search
-const contacts = await client.search('native_contact', { propertyId: 'email', operator: 'contains', value: '@acme.com' });
-
-// Create
-await client.createPerson({ email: 'jane@acme.com', firstName: 'Jane' });
-await client.createOrganization({ domain: 'acme.com', name: 'Acme Inc' });
-await client.createOpportunity({ title: 'Deal', stageId: 'stage-id', domain: 'acme.com' });
-
-// Notify
-await client.sendNotification({ channel: 'email', emailSubject: 'Hi', emailBody: '<p>Hello</p>', reasoning: 'test' });
-
-// Keyword search
-await client.keywordSearch([{ objectType: 'native_contact', keywords: ['acme'] }]);
-```
-
-### Raw MCP Access (for AI agent tool execution and full control)
-```typescript
-// searchObjects / findMeetingsByAttendee return raw ApiResponse<McpToolResult>
-const result = await client.searchObjects([{ objectType: 'native_contact' }], { propertiesToReturn: '*' });
-const parsed = JSON.parse(result.data?.content[0]?.text);
-
-// mcpCallTool works with any of the 20+ MCP tools
-await client.mcpCallTool('get_meeting_recording_context', { objectId: 'meeting-id' });
-```
-
-### MCP Tools Available
-
-Tools available via MCP depend on the user's assistant tier (Free → Turbo → Professional → Executive, cumulative).
-
-**Free (no assistant):** `search_objects`, `create_or_update_person_organization`, `create_or_update_workspace_context`, `get_meeting_recording_context`, `create_meeting_recording_clip`, `get_share_url`, `read_crm_schema`, `activate_skill`, `deactivate_skill`
-
-**Turbo adds:** `create_or_update_action`, `create_or_update_relationship`, `create_or_update_list`, `create_page`, `update_page`, `create_email_draft`, `send_notification_mcp`, `assistant_settings`, `manage_skills`, `whoami`
-
-**Professional adds:** `create_or_update_opportunity`, `create_or_update_custom_property`, `backfill_custom_property`, `analyze_pipeline_metrics`, `create_import_from_file`, `save_import_mapping`, `start_import`, `get_import_progress`, `get_import_errors`, `get_imports_by_object_type`, `analyze_csv`, `read_csv_file`, `read_file`, `transform_csv`, `create_view`, `update_view`, `connect_slack`, `open_email_sharing_rules`, `manage_workspace_members`
-
-**Executive adds:** `batch_create_or_update_opportunities`, `batch_create_or_update_people_organizations`, `search_prospects`
-
-Note: Some tools are internal-only (hidden from MCP): `web_search`, `day_ai_help`, `send_notification` (use `send_notification_mcp` instead), `check_workspace_and_user_settings`, `create_or_update_pipeline_stage`, `delete_contact`, `delete_opportunity`, `delete_organization`, `delete_stage_pipeline`, `open_in_app`, `get_context_for_meeting_recording_citations`
-
-### Key Search Patterns
-
-**Find meetings by attendee (relationship search):**
-```typescript
-await client.search('native_meetingrecording', {
-  relationship: 'attendee',
-  targetObjectType: 'native_contact',
-  targetObjectId: 'john@acme.com',  // email for contacts
-  operator: 'eq'
-}, { includeRelationships: true });
-```
-
-**Find meetings with a company:**
-```typescript
-await client.search('native_meetingrecording', {
-  relationship: 'attendee',
-  targetObjectType: 'native_organization',
-  targetObjectId: 'acme.com',  // domain for orgs
-  operator: 'eq'
-}, { includeRelationships: true });
-```
-
-**Find notes on an organization:**
-```typescript
-await client.search('native_context', {
-  relationship: 'parent',
-  targetObjectType: 'native_organization',
-  targetObjectId: 'acme.com',
-  operator: 'eq'
-}, { includeRelationships: true });
-```
-
-See SCHEMA.md for full tool list and relationship definitions.
-
-## Important Patterns
-
-### OAuth Flow
-1. User clicks "Connect to Day AI"
-2. SDK registers OAuth client dynamically
-3. Opens browser for authorization
-4. Exchanges code for tokens
-5. Auto-refreshes tokens on each request
-
-### Tool Execution Pattern
-1. User sends message to AI
-2. Claude responds with tool call(s)
-3. ToolExecutor checks: native tool or MCP tool?
-4. Executes tool and returns result
-5. Claude processes result and responds
-
-### Object-of-Work Pattern
 - Notes app stores freeform text ("Urgent Bugs", "Q1 Opportunities")
 - AI agent can read notes AND query Day AI CRM
 - User gets answers combining their notes + full CRM context
 - Natural language everywhere (no rigid forms)
 
-## Key Files to Know
+Every example app is built this way: one object the user works on, an agent that can read and change it, and Day AI for everything around it.
 
-- `src/client.ts` - Core SDK client (DayAIClient with convenience methods + raw MCP access)
-- `src/types.ts` - All TypeScript types for the convenience layer
-- `examples/desktop/electron/services/AgentService.ts` - Claude integration
-- `examples/desktop/electron/services/ToolExecutor.ts` - Tool execution logic
-- `examples/desktop/src/components/ChatPane.tsx` - Chat UI with streaming
-- `SCHEMA.md` - Full Day AI API documentation
+## Example Apps
 
-## Development Tips
+These are **templates**: clone one and make it yours.
 
-- **OAuth**: Run `yarn oauth:setup` in root to get credentials
-- **Hot reload**: Vite + Electron run together, UI hot reloads automatically
-- **Debugging**: Check Electron DevTools (Cmd+Option+I) for renderer logs
-- **Tool errors**: Check main process console for IPC/tool execution errors
-- **MCP issues**: Verify OAuth tokens are valid, check network tab
+- **Desktop** (`examples/desktop/`) - Electron notes app. Notes list on the left, editor in the center, Claude chat with Day AI tools on the right. The agent loop is hand-written with the Anthropic SDK.
+- **Desktop, Agent SDK** (`examples/desktop-claude-agent-sdk/`) - The same app with the Claude Agent SDK running the loop. Note tools run as an in-process MCP server next to Day AI.
+- **Vercel Cron** (`examples/vercel-weather-cron/`) - Scheduled workflow that emails you daily through Day AI (`send_notification_mcp`, on plans that include it). The template for digests, reports and alerts.
+- **Community Builder** (`examples/community-builder/`) - Vite + Express agent that researches and builds a community list in Day AI.
+- **Mobile** (`examples/mobile/`) - React Native / Expo chat with Day AI tools.
 
-## Common Issues
+### Build New Apps from Template
 
-1. **MCP connection fails**: Re-run OAuth setup, check network
-2. **Tools not working**: Verify Anthropic API key in Settings
-3. **Port in use**: Kill process on 5173/5174/5175, or change port in vite.config.ts
-4. **Type errors**: Run `npm run build` to regenerate types
+1. Copy `examples/desktop/` (or `examples/desktop-claude-agent-sdk/`) to a new directory
+2. Rename "notes" to your object type (bugs, tasks, etc.)
+3. Update tools and UI for your use case
+4. Day AI MCP integration works out of the box
+
+## Layout
+
+```
+src/client.ts        DayAIClient: OAuth refresh, MCP JSON-RPC, retries, typed helpers
+src/types.ts         ObjectType, WhereCondition, SearchOptions, helper input types
+scripts/             oauth-setup (browser OAuth → .env), generate-tools-doc (→ TOOLS.md), test runner
+tests/tools/         Live tool tests (local Day AI dev server only)
+examples/*.ts        Small runnable scripts (built with the SDK: yarn example:*)
+examples/<app>/      Standalone template apps, each with its own package.json
+SCHEMA.md            Data model, objectIds, search_objects syntax, relationships (hand-written)
+TOOLS.md             Every MCP tool and its inputs (generated — don't hand-edit)
+```
+
+## Commands
+
+```bash
+yarn build                 # tsc → dist/ (src, scripts, tests, examples/*.ts)
+yarn oauth:setup           # register a client, authorize in the browser, write .env
+yarn docs:tools            # regenerate TOOLS.md from the live server
+yarn test                  # live tool tests; local Day AI dev server only (see tests/README.md)
+yarn example:mcp <email>   # also example:meetings, example:pagination
+```
+
+Each app in `examples/<app>/` installs and runs on its own; see its README.
+
+## How Day AI Works (what agents get wrong)
+
+- **objectIds are opaque UUIDs.** Contacts are not keyed by email, organizations not by domain. Look them up by the `email` / `domain` property, then use the returned `objectId`. The only exception: relationship filters on `native_emailmessage` and `native_calendarevent` take emails and domains.
+- **Relationship filters need the right name for the searched type.** Opportunities filter by company with `subject`; meetings by person or company with `attendee`. The full table is in SCHEMA.md.
+- **Names and titles are contains-only.** `eq` on `firstName`, `lastName`, organization `name` or opportunity `domain` always returns nothing.
+- **Email is `native_emailmessage`.** `native_gmailthread` is deprecated.
+- **`read_crm_schema` is the source of truth** for properties, custom properties (UUID ids; picklist values are option UUIDs) and searchable relationships in a given workspace.
+- **Tool access depends on the assistant's plan** (Turbo / Professional / Executive / Super), which isn't strictly cumulative. Trust `tools/list`, not a hard-coded list. TOOLS.md was generated on Professional.
+- **Keep calls focused** (very broad queries can time out), and remember `search_objects` paginates (`status: "partial"` + `nextOffset`, or cursor mode for big scans).
+- Tool results are a single text block, usually JSON. `DayAIClient` parses it in `search()` and the create helpers; `mcpCallTool()` returns it raw.
+
+## Building on the SDK
+
+- **Agents should connect to the MCP server directly** (Claude Agent SDK `mcpServers`, or the Messages API MCP connector) using `client.mcpUrl` and `await client.getAccessToken()`. Write a custom tool loop only when the app needs to intercept calls or mix in its own tools — see `examples/desktop` and `examples/community-builder`.
+- **Default model is `claude-sonnet-5-5`**; `claude-opus-5-5` for long multi-step work, `claude-haiku-5-5` for high-volume simple jobs. Use the aliases without date suffixes.
+- In a hand-written loop, append the model's full `response.content` (thinking blocks included) to history before tool results. Don't rebuild assistant turns from text.
+- With the Agent SDK, expose your app's own tools (the object of work) with `createSdkMcpServer()` and grant every server with `allowedTools: ['mcp__<server-name>__*']` rather than `permissionMode: 'bypassPermissions'`.
+
+## Changing This Repo
+
+- **When the platform changes:** run `yarn docs:tools`, then update SCHEMA.md and the README by checking `read_crm_schema` output and the live tool list. Don't document from memory.
+- **Keep `src/` small.** Helpers exist for the most common calls; everything else goes through `mcpCallTool()`. New helpers must match the live tool schema (see TOOLS.md) and get a test in `tests/tools/`.
+- **Don't run write tools against a real workspace casually.** `create_or_update_*`, campaign and import tools change customer data.
+- **Never commit `.env`** or print `CLIENT_SECRET` / `REFRESH_TOKEN`.
+- Match the existing style: 2-space indent, single quotes in examples, double quotes in `src/`.
 
 ## Next Steps for New Claude Sessions
 
 1. Read this file for context
 2. Check user's specific request
 3. If modifying desktop app: understand `electron/services/` and `src/components/`
-4. If adding features: check SCHEMA.md for available MCP tools
+4. If adding features: check TOOLS.md for available MCP tools and SCHEMA.md for how to query them
 5. If building new app: use `examples/desktop/` as template
 
 ## Philosophy

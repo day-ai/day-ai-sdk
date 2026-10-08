@@ -98,7 +98,7 @@ class OAuthSetup {
       redirect_uris: [this.redirectUri],
       client_name: this.integrationName,
       client_uri: "https://github.com/day-ai/day-ai-sdk",
-      scope: "assistant:*:use native_organization:write native_contact:write",
+      scope: "assistant:*:use",
     };
 
     const response = await fetch(`${this.baseUrl}/api/oauth/register`, {
