@@ -1,6 +1,8 @@
 # Day AI SDK
 
-Connect Claude — or your own code — to your Day AI workspace.
+The Day AI platform as a TypeScript SDK.
+
+Anything you can do in Day AI, you can do with this SDK — search contacts, create opportunities, pull meeting transcripts. Use it like a plain API, build AI-powered tools, or vibe code with Claude.
 
 Day AI exposes your CRM (contacts, companies, opportunities, meetings, emails, pages, campaigns) as a remote **MCP server** at `https://day.ai/api/mcp`. This repo gives you:
 
