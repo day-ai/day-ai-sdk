@@ -1,5 +1,5 @@
 import { query } from '@anthropic-ai/claude-agent-sdk'
-import { AGENT_TOOLS } from './tools'
+import { createNotesMcpServer, NOTES_SERVER_NAME, type NotesChange } from './notesMcpServer'
 import { getConnectedServersForSDK, getAllMCPTools, MCPToolInfo } from './MCPClientService'
 
 // Re-export legacy types for backward compatibility
@@ -99,6 +99,7 @@ export interface AgentOptions {
   model?: string
   resume?: string // Session ID to resume
   claudeCodePath?: string // Path to Claude Code CLI
+  onNotesChanged?: (change: NotesChange) => void // Called after a note tool writes
 }
 
 const DEFAULT_MODEL = 'sonnet'
@@ -173,42 +174,23 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
   }
 
   /**
-   * Build native tools into SDK format
-   */
-  private buildNativeTools(): Array<{
-    name: string
-    description: string
-    inputSchema: Record<string, unknown>
-    execute: (args: Record<string, unknown>) => Promise<{ content: Array<{ type: string; text: string }> }>
-  }> {
-    // Note: The SDK handles tool execution through MCP servers
-    // Native tools need to be exposed via a local MCP server or handled differently
-    // For now, we'll include them in the system prompt but the actual execution
-    // will need to be handled by the caller via the onMessage callback
-    return AGENT_TOOLS.map((tool) => ({
-      name: tool.name,
-      description: tool.description || '',
-      inputSchema: tool.input_schema as Record<string, unknown>,
-      execute: async () => {
-        // This won't be called directly - tool execution is handled externally
-        return { content: [{ type: 'text', text: 'Tool execution handled externally' }] }
-      },
-    }))
-  }
-
-  /**
    * Options shared by chat() and chatWithStreaming().
    *
    * Claude Code's built-in tools (Bash, file edits, web) are switched off: this
-   * app only needs the connected MCP servers. Each server's tools are
-   * auto-approved with an `mcp__<server>__*` rule instead of bypassing
-   * permissions for everything.
+   * app only needs the connected MCP servers plus its own note tools, which run
+   * in-process as the `notes` MCP server. Each server's tools are auto-approved
+   * with an `mcp__<server>__*` rule instead of bypassing permissions for
+   * everything.
    */
   private buildSdkOptions(
     systemPromptAppend: string,
+    noteId: string,
     options?: AgentOptions
   ): NonNullable<Parameters<typeof query>[0]['options']> {
-    const mcpServers = getConnectedServersForSDK()
+    const mcpServers = {
+      ...getConnectedServersForSDK(),
+      [NOTES_SERVER_NAME]: createNotesMcpServer(noteId, options?.onNotesChanged),
+    }
 
     return {
       model: options?.model || DEFAULT_MODEL,
@@ -247,7 +229,7 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
     // Build system prompt with note context
     const systemPromptAppend = this.buildSystemPrompt(context, mcpTools)
 
-    const sdkOptions = this.buildSdkOptions(systemPromptAppend, options)
+    const sdkOptions = this.buildSdkOptions(systemPromptAppend, context.noteId, options)
 
     // Resume session if provided
     if (options?.resume) {
@@ -347,7 +329,7 @@ Be concise and helpful. If you need to edit a note, always use the update_note t
     // Build system prompt with note context
     const systemPromptAppend = this.buildSystemPrompt(context, mcpTools)
 
-    const sdkOptions = this.buildSdkOptions(systemPromptAppend, options)
+    const sdkOptions = this.buildSdkOptions(systemPromptAppend, context.noteId, options)
 
     // Resume session if provided
     if (options?.resume) {

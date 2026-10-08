@@ -19,7 +19,8 @@
     "dotenv": "^16.4.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "uuid": "^11.0.3"
+    "uuid": "^11.0.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",

@@ -448,17 +448,6 @@ ipcMain.handle('chat-send-message', async (_event, noteId: string, message: stri
                 })
                 saveChatHistory(noteId, messages, sessionId)
 
-                // Notify about note updates for specific tools
-                if (block.name === 'update_note') {
-                  if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('note-updated', noteId)
-                  }
-                }
-                if (block.name === 'create_note') {
-                  if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('notes-changed')
-                  }
-                }
               } else if (block.type === 'tool_result') {
                 // Save tool result message
                 const resultContent = typeof block.content === 'string'
@@ -511,6 +500,12 @@ ipcMain.handle('chat-send-message', async (_event, noteId: string, message: stri
       },
       {
         resume: storedSessionId,
+        // Note tools report successful writes so the editor and sidebar refresh
+        onNotesChanged: (change) => {
+          if (!mainWindow || mainWindow.isDestroyed()) return
+          if (change.type === 'updated') mainWindow.webContents.send('note-updated', change.noteId)
+          else mainWindow.webContents.send('notes-changed')
+        },
       }
     )
   } catch (error) {
