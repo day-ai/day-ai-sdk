@@ -10,6 +10,8 @@ Day AI exposes your CRM (contacts, companies, opportunities, meetings, emails, p
 - **Reference docs** for the data model ([SCHEMA.md](SCHEMA.md)) and every tool ([TOOLS.md](TOOLS.md))
 - **Example apps** you can clone and adapt
 
+Day AI also hosts your **Second Brain**: deploy a local agent harness of markdown files into [Day AI Pages](#5-deploy-a-second-brain-to-day-ai-pages), where they become a shared, permissioned knowledge graph connected to your CRM.
+
 ---
 
 ## Pick your path
@@ -20,6 +22,7 @@ Day AI exposes your CRM (contacts, companies, opportunities, meetings, emails, p
 | Build an agent that works with Day AI data | [2. Build an agent](#2-build-an-agent) | A little |
 | Script, sync or automate Day AI from your own backend | [3. Call Day AI from code](#3-call-day-ai-from-code) | Yes |
 | Have Claude Code build a tool for you | [4. Vibe code with Claude Code](#4-vibe-code-with-claude-code) | Claude writes it |
+| Give your agent's markdown "Second Brain" a shared, permissioned home | [5. Deploy a Second Brain to Day AI Pages](#5-deploy-a-second-brain-to-day-ai-pages) | A little |
 
 ---
 
@@ -252,6 +255,75 @@ Then try:
 - *"Sync closed-won deals from Day AI into our billing system."*
 
 This repo's [CLAUDE.md](CLAUDE.md) gives Claude Code the context it needs about the SDK, and with the MCP server connected it can look at your real data while it builds.
+
+---
+
+## 5. Deploy a Second Brain to Day AI Pages
+
+Many agent setups run on a **"Second Brain"**: a local folder of plain markdown files such as `CLAUDE.md`, playbooks, account notes, decision logs, and running ledgers. The agent reads them to load context and writes back to them to keep state. This works well for one person on one machine. It gets hard once the files have to be shared, organized, kept private, or tied to the people and deals they describe.
+
+**Day AI lets you deploy that Second Brain into the platform.** Pages are built to work as a knowledge graph, and they make a strong home for a collection of flat text files:
+
+| Capability | What it means for your Second Brain |
+|---|---|
+| **1. Notion-like display and real-time collaborative editing** | Your markdown files appear as clean, formatted documents in Day AI. Teammates can read and edit them together in real time, with no git or sync step. |
+| **2. Foldering** | Organize Pages into nested folders that mirror your local directory structure (`accounts/`, `playbooks/`, `ledgers/`), so the hierarchy carries over. |
+| **3. Graph associations** | Pages connect to contacts, organizations, and opportunities in the graph. An account brief sits with the account, and a deal ledger sits with the deal, so both people and agents find them in context. |
+| **4. Data privacy and sharing permissions** | Pages and folders are private until you share them. Keep personal working notes to yourself, and publish team playbooks to the workspace. |
+| **5. Agentic reading and updating** | Agents read and edit Pages through MCP, so Pages can hold durable state such as ledgers, running logs, checklists, and memory, and that state persists across sessions, machines, and users. |
+
+### Deploying a Second Brain to Pages
+
+```typescript
+import { readFileSync } from 'fs';
+import { marked } from 'marked'; // any markdown → HTML converter
+import { DayAIClient } from './src';
+
+const client = new DayAIClient();
+// Tool results are a single JSON text block; created objects come back with their objectId
+const call = async (tool: string, args: Record<string, any>) =>
+  JSON.parse((await client.mcpCallTool(tool, args)).data!.content[0].text);
+
+// 1. Mirror your local folder structure
+const brain = await call('create_or_update_folder', { title: 'Second Brain' });
+const ledgers = await call('create_or_update_folder', {
+  title: 'ledgers', parentFolderId: brain.objectId,
+});
+
+// 2. Deploy a markdown file as a Page and file it
+const page = await call('create_page', {
+  title: 'Deal Ledger',
+  pageHtmlContent: await marked(readFileSync('second-brain/ledgers/deals.md', 'utf-8')),
+});
+await call('move_to_folder', {
+  items: [{ objectType: 'native_page', objectId: page.objectId }],
+  destinationFolderId: ledgers.objectId,
+});
+
+// 3. Agents read state back...
+const ledger = await call('read_page', { objectId: page.objectId });
+
+// ...and append to it without resending the whole page
+await call('update_page', {
+  objectId: page.objectId,
+  insertContentHtml: '<p>2026-11-03: Acme moved to Negotiation.</p>',
+  insertPosition: 'page_end',
+});
+
+// 4. Share with the workspace when it's ready (Pages start private)
+await call('update_page', {
+  objectId: page.objectId,
+  publishedForUserAt: new Date().toISOString(),
+});
+
+// 5. Find the Pages connected to a company
+const acmePages = await client.search('native_page', {
+  relationship: 'related', targetObjectType: 'native_organization',
+  targetObjectId: '<organization objectId>', operator: 'eq',
+});
+```
+
+Your local harness stays the same (markdown in, markdown out). Day AI adds collaboration, structure, graph context, and access control on top. You can also attach a Page or a whole folder to a Day AI skill with `manage_skills`, so the Day AI assistant loads that Second Brain at runtime. See the [Pages & notes](TOOLS.md#pages--notes) and [Folders & files](TOOLS.md#folders--files) tools in TOOLS.md for every option, including targeted edits (`oldContentMatch` / `newContentReplace`) and structured table updates (`tableOperations`) for ledgers.
 
 ---
 
