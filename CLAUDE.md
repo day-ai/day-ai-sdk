@@ -58,6 +58,7 @@ These are **templates**: clone one and make it yours.
 ```
 src/client.ts        DayAIClient: OAuth refresh, MCP JSON-RPC, retries, typed helpers
 src/types.ts         ObjectType, WhereCondition, SearchOptions, helper input types
+cli/                 The `day-ai` CLI (commander, day-ops layout): login/profiles in ~/.config/day-ai, tools, describe, call
 scripts/             oauth-setup (browser OAuth → .env), generate-tools-doc (→ TOOLS.md), test runner
 tests/tools/         Live tool tests (local Day AI dev server only)
 examples/*.ts        Small runnable scripts (built with the SDK: yarn example:*)
@@ -69,7 +70,10 @@ TOOLS.md             Every MCP tool and its inputs (generated — don't hand-edi
 ## Commands
 
 ```bash
-yarn build                 # tsc → dist/ (src, scripts, tests, examples/*.ts)
+yarn setup                 # install, build, npm link (`day-ai` on PATH), doctor
+yarn build                 # tsc → dist/ (src, cli, scripts, tests, examples/*.ts)
+day-ai login               # browser OAuth → ~/.config/day-ai/credentials.json (no .env)
+day-ai tools | describe <tool> | call <tool> '{…}'   # writes need --yes; JSON on stdout
 yarn oauth:setup           # register a client, authorize in the browser, write .env
 yarn docs:tools            # regenerate TOOLS.md from the live server
 yarn test                  # live tool tests; local Day AI dev server only (see tests/README.md)

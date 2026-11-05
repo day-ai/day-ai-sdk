@@ -21,6 +21,7 @@ Day AI also hosts your **Second Brain**: deploy a local agent harness of markdow
 | Ask Claude about your CRM, draft follow-ups, update deals | [1. Connect Day AI to Claude](#1-connect-day-ai-to-claude) | None |
 | Build an agent that works with Day AI data | [2. Build an agent](#2-build-an-agent) | A little |
 | Script, sync or automate Day AI from your own backend | [3. Call Day AI from code](#3-call-day-ai-from-code) | Yes |
+| Call any Day AI tool from your terminal or a shell script | [The `day-ai` CLI](#the-day-ai-cli) | None |
 | Have Claude Code build a tool for you | [4. Vibe code with Claude Code](#4-vibe-code-with-claude-code) | Claude writes it |
 | Give your agent's markdown "Second Brain" a shared, permissioned home | [5. Deploy a Second Brain to Day AI Pages](#5-deploy-a-second-brain-to-day-ai-pages) | A little |
 
@@ -69,6 +70,8 @@ yarn oauth:setup          # prints a sign-in URL, then saves credentials to .env
 ```
 
 Open the printed URL, sign in, and pick the workspace and assistant your integration will act as. The assistant you pick decides which tools are available (see [Plans and tool access](#plans-and-tool-access)).
+
+Working from a terminal? `yarn setup` and `day-ai login` sign you in with no `.env` at all, and `day-ai token` hands an access token to any MCP client. See [The `day-ai` CLI](#the-day-ai-cli).
 
 ### Option A — Claude Agent SDK (recommended)
 
@@ -236,6 +239,37 @@ const result = await client.mcpCallTool('get_meeting_recording_context', {
 
 See [SCHEMA.md](SCHEMA.md) for query syntax and [TOOLS.md](TOOLS.md) for every tool's inputs. Runnable scripts are in [`examples/`](examples/): `mcp-tool-example.ts`, `recent-meetings-context.ts` and `pagination-example.ts`.
 
+### The `day-ai` CLI
+
+Every Day AI tool, from your terminal. You sign in once through the browser, and there are no environment variables to manage.
+
+```bash
+git clone https://github.com/day-ai/day-ai-sdk
+cd day-ai-sdk
+yarn setup        # install, build, npm link (puts `day-ai` on your PATH), then a health check
+day-ai login      # opens your browser; pick the workspace and assistant
+```
+
+```bash
+day-ai tools                     # what your assistant can call (tools page, --read-only, --json)
+day-ai describe read_page        # a tool's inputs, from the live schema
+day-ai call read_page -a objectId=<page objectId>
+
+# Arguments: inline JSON, a file, stdin, or -a pairs (key=value is a string, key:=json is raw JSON)
+day-ai call search_objects '{"queries":[{"objectType":"native_page"}],"propertiesToReturn":["title"]}'
+day-ai call search_objects -f query.json | jq '.native_page.results[].title'
+cat page.json | day-ai call create_page - --yes
+```
+
+- **Output:** results go to stdout as JSON and progress goes to stderr, so `| jq` works. Pass `--raw` to get the tool's text exactly as returned.
+- **Write guard:** a tool the server doesn't mark read-only changes workspace data, so it's a dry run until you add `--yes`. `--dry-run` shows the request for any tool and sends nothing.
+- **Profiles:** each login is one workspace and assistant pair. Add more with `day-ai login --profile work`, pick one per command with `--profile` or `DAY_AI_PROFILE`, and change the default with `day-ai use work`. `day-ai profiles` lists them.
+- **Credentials** live in `~/.config/day-ai/credentials.json` (owner-only). The cached access token is reused between commands, and refreshed tokens are written back automatically. If you have no profile, the CLI uses `CLIENT_ID` / `CLIENT_SECRET` / `REFRESH_TOKEN` from the environment or a local `.env`, so CI and `yarn oauth:setup` setups still work.
+- **Other MCP clients:** `day-ai token` prints a valid bearer token for `https://day.ai/api/mcp`, and `day-ai token --json` adds the URL and expiry.
+- **Health checks:** `day-ai status` shows which credentials are in use and whether they work. `day-ai doctor` also checks node, the PATH link and file permissions.
+
+After pulling, run `yarn build`. The link points at `dist/`, so you don't need to relink. If `day-ai` isn't found after `yarn setup`, your npm global bin isn't on your PATH: add `$(npm prefix -g)/bin` (with nvm it's `~/.nvm/versions/node/<version>/bin`). To uninstall, run `npm unlink -g day-ai-sdk`.
+
 ---
 
 ## 4. Vibe code with Claude Code
@@ -323,6 +357,14 @@ const acmePages = await client.search('native_page', {
 });
 ```
 
+The same steps work from a shell hook or cron with [the `day-ai` CLI](#the-day-ai-cli):
+
+```bash
+day-ai call read_page -a objectId=<page objectId> --raw
+day-ai call update_page -a objectId=<page objectId> \
+  -a insertContentHtml='<p>2026-11-03: Acme moved to Negotiation.</p>' -a insertPosition=page_end --yes
+```
+
 Your local harness stays the same (markdown in, markdown out). Day AI adds collaboration, structure, graph context, and access control on top. You can also attach a Page or a whole folder to a Day AI skill with `manage_skills`, so the Day AI assistant loads that Second Brain at runtime. See the [Pages & notes](TOOLS.md#pages--notes) and [Folders & files](TOOLS.md#folders--files) tools in TOOLS.md for every option, including targeted edits (`oldContentMatch` / `newContentReplace`) and structured table updates (`tableOperations`) for ledgers.
 
 ---
@@ -361,6 +403,8 @@ Integrations act with the permissions of the user who authorized them, and only 
 | `DAY_AI_BASE_URL` | Day AI URL | `https://day.ai` |
 | `CALLBACK_URL` | OAuth redirect used by `oauth:setup` | `http://127.0.0.1:8080/callback` |
 | `CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN` | OAuth credentials | Written by `oauth:setup` |
+| `DAY_AI_PROFILE` | `day-ai` CLI profile to use | The default profile |
+| `DAY_AI_CONFIG_DIR` | Where the `day-ai` CLI keeps credentials | `~/.config/day-ai` |
 
 The workspace and assistant are chosen on the consent screen and are part of the credentials. To switch workspace or assistant, run `yarn oauth:setup` again. Each run registers a new OAuth client.
 
@@ -393,7 +437,9 @@ Treat `CLIENT_SECRET` and `REFRESH_TOKEN` like passwords: keep them in a secret 
 | Problem | Fix |
 |---|---|
 | `Missing required OAuth credentials` | Run `yarn oauth:setup`, or pass `clientId`, `clientSecret` and `refreshToken` to `new DayAIClient()` |
-| `Please set INTEGRATION_NAME` | Copy `.env.example` to `.env` and set it |
+| `Please set INTEGRATION_NAME` | Copy `.env.example` to `.env` and set it, or use `day-ai login`, which doesn't need it |
+| `day-ai: command not found` | Run `yarn setup`. If it's still missing, add `$(npm prefix -g)/bin` to your PATH. `node dist/cli/cli.js` always works from the repo |
+| `day-ai` says *Not logged in* | Run `day-ai login`, or `day-ai profiles` to check which profiles exist |
 | `Authorization timeout` | Finish the browser sign-in within 5 minutes |
 | `Failed to refresh token: 403` or `404` | The grant was revoked or the client was removed. Run `yarn oauth:setup` again |
 | `No agent context found` | Re-authorize and pick an assistant on the consent screen |

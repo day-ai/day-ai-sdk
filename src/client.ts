@@ -22,6 +22,28 @@ export interface DayAIConfig {
   refreshToken: string;
   /** @deprecated Ignored. The workspace is chosen when the user authorizes. */
   workspaceId?: string;
+  /** Suppress progress logging (token refresh, MCP init). Errors are still returned. */
+  quiet?: boolean;
+  /** A cached access token to use until it expires, skipping the first refresh. */
+  accessToken?: string;
+  /** Expiry of `accessToken`, in epoch seconds. */
+  accessTokenExpiresAt?: number;
+  /**
+   * Called after every token refresh. If the server rotated the refresh token,
+   * `refreshToken` is the new one: persist it, or the stored one stops working.
+   */
+  onTokenRefresh?: (tokens: RefreshedTokens) => void;
+  /** Name and version sent to the MCP server on initialize. */
+  clientInfo?: { name: string; version: string };
+}
+
+export interface RefreshedTokens {
+  accessToken: string;
+  /** Epoch seconds. */
+  accessTokenExpiresAt: number;
+  refreshToken: string;
+  /** True when the server issued a new refresh token. */
+  refreshTokenRotated: boolean;
 }
 
 export interface TokenResponse {
@@ -148,7 +170,15 @@ export class DayAIClient {
       clientSecret: config?.clientSecret || process.env.CLIENT_SECRET || "",
       refreshToken: config?.refreshToken || process.env.REFRESH_TOKEN || "",
       workspaceId: config?.workspaceId || process.env.WORKSPACE_ID,
+      quiet: config?.quiet,
+      onTokenRefresh: config?.onTokenRefresh,
+      clientInfo: config?.clientInfo,
     };
+
+    if (config?.accessToken && config.accessTokenExpiresAt) {
+      this.currentAccessToken = config.accessToken;
+      this.tokenExpiresAt = config.accessTokenExpiresAt;
+    }
 
     if (
       !this.config.clientId ||
@@ -180,7 +210,7 @@ export class DayAIClient {
       return this.currentAccessToken;
     }
 
-    console.log("🔄 Refreshing access token...");
+    this.log("🔄 Refreshing access token...");
 
     const payload = new URLSearchParams({
       grant_type: "refresh_token",
@@ -209,8 +239,26 @@ export class DayAIClient {
     this.currentAccessToken = tokenData.access_token;
     this.tokenExpiresAt = now + tokenData.expires_in;
 
-    console.log("✅ Access token refreshed");
+    // If the server rotates refresh tokens, the old one is now spent.
+    const rotated =
+      !!tokenData.refresh_token &&
+      tokenData.refresh_token !== this.config.refreshToken;
+    if (rotated) {
+      this.config.refreshToken = tokenData.refresh_token!;
+    }
+    this.config.onTokenRefresh?.({
+      accessToken: this.currentAccessToken,
+      accessTokenExpiresAt: this.tokenExpiresAt,
+      refreshToken: this.config.refreshToken,
+      refreshTokenRotated: rotated,
+    });
+
+    this.log("✅ Access token refreshed");
     return this.currentAccessToken;
+  }
+
+  private log(message: string): void {
+    if (!this.config.quiet) console.log(message);
   }
 
   /**
@@ -477,7 +525,7 @@ export class DayAIClient {
   async mcpInitialize(): Promise<ApiResponse> {
     const result = await this.mcpRequest('initialize', {
       protocolVersion: '2025-06-18',
-      clientInfo: {
+      clientInfo: this.config.clientInfo ?? {
         name: 'Day AI SDK',
         version: '0.1.0',
       },
@@ -489,7 +537,7 @@ export class DayAIClient {
 
     if (result.success) {
       this.mcpInitialized = true;
-      console.log('✅ MCP initialized');
+      this.log('✅ MCP initialized');
     }
 
     return result;

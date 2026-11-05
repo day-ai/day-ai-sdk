@@ -17,6 +17,7 @@
   },
   "include": [
     "src/**/*",
+    "cli/**/*",
     "scripts/**/*",
     "tests/**/*",
     "examples/*.ts"

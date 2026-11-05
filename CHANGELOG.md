@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **The `day-ai` CLI** (`cli/`). `yarn setup` installs, builds and runs `npm link`. `day-ai login` signs in through the browser and saves credentials to `~/.config/day-ai/credentials.json`, with no `.env` or `INTEGRATION_NAME` needed. `day-ai tools`, `describe` and `call` list, explain and call any MCP tool. Tools that change data are a dry run until `--yes`. Also adds named profiles (`--profile`, `DAY_AI_PROFILE`, `day-ai use`), `day-ai token` for other MCP clients, `status` and `doctor`.
+- `DayAIClient` options: `quiet` (no progress logging), `accessToken` / `accessTokenExpiresAt` (start from a cached token), `onTokenRefresh` (persist refreshed tokens) and `clientInfo`.
+
+### Fixed
+
+- `DayAIClient` now keeps a rotated refresh token when the server issues one, instead of continuing to use the old one.
+
 ## 0.2.0 — 2026-10
 
 Brings the SDK in line with the current Day AI platform. If you're upgrading, read **Breaking changes**.

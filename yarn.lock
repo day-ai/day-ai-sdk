@@ -23,6 +23,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"commander@npm:^14.0.1":
+  version: 14.0.3
+  resolution: "commander@npm:14.0.3"
+  checksum: 10c0/755652564bbf56ff2ff083313912b326450d3f8d8c85f4b71416539c9a05c3c67dbd206821ca72635bf6b160e2afdefcb458e86b317827d5cb333b69ce7f1a24
+  languageName: node
+  linkType: hard
+
 "data-uri-to-buffer@npm:^4.0.0":
   version: 4.0.1
   resolution: "data-uri-to-buffer@npm:4.0.1"
@@ -36,9 +43,12 @@ __metadata:
   dependencies:
     "@types/dotenv": "npm:^8.2.3"
     "@types/node": "npm:^24.5.2"
+    commander: "npm:^14.0.1"
     dotenv: "npm:^16.3.1"
     node-fetch: "npm:^3.3.2"
     typescript: "npm:^5.2.2"
+  bin:
+    day-ai: ./dist/cli/cli.js
   languageName: unknown
   linkType: soft
 

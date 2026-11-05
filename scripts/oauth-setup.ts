@@ -206,6 +206,8 @@ class OAuthSetup {
       client_id: clientData.client_id,
       client_secret: clientData.client_secret,
       code: code,
+      // Must repeat the authorization request's redirect_uri exactly (RFC 6749 §4.1.3).
+      redirect_uri: this.redirectUri,
     });
 
     const response = await fetch(`${this.baseUrl}/api/oauth`, {

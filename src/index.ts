@@ -1,6 +1,7 @@
 export {
   DayAIClient,
   type DayAIConfig,
+  type RefreshedTokens,
   type ApiResponse,
   type TokenResponse,
   type JsonRpcRequest,
