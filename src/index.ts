@@ -36,5 +36,7 @@ export {
   type AuthorizeUrlParams,
 } from './pkce';
 
+export { SDK_VERSION } from './version';
+
 // Re-export the client as default export
 export { DayAIClient as default } from './client';

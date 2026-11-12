@@ -23,17 +23,12 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { DayAIClient } from "../src/client";
+import { SDK_VERSION } from "../src/version";
 
 /** Repo root: this file is cli/config.ts in source and dist/cli/config.js when built. */
 export const ROOT = path.resolve(__dirname, __dirname.includes(`${path.sep}dist${path.sep}`) ? "../.." : "..");
 
-export const VERSION: string = (() => {
-  try {
-    return JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")).version;
-  } catch {
-    return "0.0.0";
-  }
-})();
+export const VERSION: string = SDK_VERSION;
 
 export const CONFIG_DIR = process.env.DAY_AI_CONFIG_DIR || path.join(os.homedir(), ".config", "day-ai");
 export const CREDENTIALS_FILE = path.join(CONFIG_DIR, "credentials.json");
