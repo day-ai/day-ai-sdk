@@ -410,6 +410,35 @@ The workspace and assistant are chosen on the consent screen and are part of the
 
 Treat `CLIENT_SECRET` and `REFRESH_TOKEN` like passwords: keep them in a secret manager or your platform's environment variables, never in source control or client-side code.
 
+### Writing your own login (Python, Go, …)
+
+`yarn oauth:setup`, `day-ai login` and the example apps already do all of this. If you copied the login flow into your own code, it must use **PKCE (S256)**. Day AI is starting to require it on every authorization-code login, and a login without it will fail. Server metadata: `https://day.ai/.well-known/oauth-authorization-server`.
+
+1. **Register a client:** `POST /api/oauth/register` with `redirect_uris`, `client_name` and `scope: "assistant:*:use"`. You get back `client_id` and `client_secret`.
+2. **Make a PKCE pair for this login:** `code_verifier` = 32 random bytes from a CSPRNG, base64url without padding (43 chars). `code_challenge` = base64url(SHA-256(`code_verifier`)), no padding. Only `S256` is accepted; `plain` is rejected.
+3. **Send the user to the consent screen:**
+   ```
+   GET /integrations/authorize?client_id=…&redirect_uri=…&state=…&response_type=code
+       &code_challenge=<challenge>&code_challenge_method=S256
+   ```
+4. **Exchange the code** (check `state` first):
+   ```
+   POST /api/oauth   (application/x-www-form-urlencoded)
+   grant_type=authorization_code&client_id=…&client_secret=…&code=…
+   &redirect_uri=<exactly as in step 3>&code_verifier=<verifier>
+   ```
+
+Keep the verifier in memory for that one login: don't log it, store it or reuse it. Refresh requests (`grant_type=refresh_token`) don't change, and existing refresh tokens keep working.
+
+```python
+import base64, hashlib, secrets
+
+verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b"=").decode()
+challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+```
+
+In TypeScript, the SDK exports `createPkcePair()` and `buildAuthorizeUrl()`.
+
 ---
 
 ## Architecture

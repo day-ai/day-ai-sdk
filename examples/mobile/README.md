@@ -45,7 +45,7 @@ Day AI credentials aren't configured through `.env`; the app gets them through O
 2. Sign in to Day AI in the browser and pick the workspace and assistant the app should act as.
 3. A green **Day AI** indicator appears in the header when you're connected.
 
-The app registers an OAuth client, sends you to `https://day.ai/integrations/authorize` (scope `assistant:*:use`) and stores the refresh token on the device. OAuth runs on iOS and Android only, not web.
+The app registers an OAuth client, sends you to `https://day.ai/integrations/authorize` (scope `assistant:*:use`, with PKCE S256) and stores the refresh token on the device. OAuth runs on iOS and Android only, not web.
 
 The assistant you pick decides which tools Claude can use. See [TOOLS.md](../../TOOLS.md) for the tools and [SCHEMA.md](../../SCHEMA.md) for how Day AI data is shaped.
 

@@ -28,5 +28,13 @@ export type {
   SendNotificationInput,
 } from './types';
 
+export {
+  createPkcePair,
+  pkceChallenge,
+  buildAuthorizeUrl,
+  type PkcePair,
+  type AuthorizeUrlParams,
+} from './pkce';
+
 // Re-export the client as default export
 export { DayAIClient as default } from './client';

@@ -7,7 +7,9 @@
  *   2. Register an OAuth client for that redirect URI (scope assistant:*:use)
  *   3. Open the browser at the consent screen, where the user picks the
  *      workspace and assistant this login acts as
- *   4. Verify `state`, exchange the code for tokens
+ *   4. Verify `state`, exchange the code (with the PKCE verifier) for tokens
+ *
+ * Every login uses PKCE (S256). The verifier lives only in this function's scope.
  */
 import * as http from "node:http";
 import * as os from "node:os";
@@ -15,6 +17,7 @@ import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import type { AddressInfo } from "node:net";
 import { info } from "./output";
+import { buildAuthorizeUrl, createPkcePair } from "../src/pkce";
 
 export interface LoginOptions {
   baseUrl: string;
@@ -50,6 +53,7 @@ export function defaultClientName(): string {
 
 export async function login(opts: LoginOptions): Promise<LoginResult> {
   const state = randomBytes(16).toString("hex");
+  const pkce = createPkcePair();
   const callback = startCallbackServer(state, opts.port ?? 0, opts.timeoutMs ?? 5 * 60_000);
   const port = await callback.port;
   const redirectUri = `http://127.0.0.1:${port}/callback`;
@@ -57,19 +61,19 @@ export async function login(opts: LoginOptions): Promise<LoginResult> {
   try {
     const registered = await registerClient(opts.baseUrl, opts.clientName, redirectUri);
 
-    const authUrl = `${opts.baseUrl}/integrations/authorize?${new URLSearchParams({
-      client_id: registered.client_id,
-      redirect_uri: redirectUri,
+    const authUrl = buildAuthorizeUrl(opts.baseUrl, {
+      clientId: registered.client_id,
+      redirectUri,
       state,
-      response_type: "code",
-    })}`;
+      codeChallenge: pkce.challenge,
+    });
 
     info(`Sign in to Day AI and choose the workspace and assistant for this login:\n\n  ${authUrl}\n`);
     if (opts.openBrowser) openInBrowser(authUrl);
     info("Waiting for the browser (5 minutes)…");
 
     const code = await callback.code;
-    const tokens = await exchangeCode(opts.baseUrl, registered, code, redirectUri);
+    const tokens = await exchangeCode(opts.baseUrl, registered, code, redirectUri, pkce.verifier);
     return {
       clientId: registered.client_id,
       clientSecret: registered.client_secret,
@@ -97,7 +101,13 @@ async function registerClient(baseUrl: string, clientName: string, redirectUri: 
   return (await res.json()) as RegisteredClient;
 }
 
-async function exchangeCode(baseUrl: string, client: RegisteredClient, code: string, redirectUri: string): Promise<Tokens> {
+async function exchangeCode(
+  baseUrl: string,
+  client: RegisteredClient,
+  code: string,
+  redirectUri: string,
+  codeVerifier: string
+): Promise<Tokens> {
   const res = await fetch(`${baseUrl}/api/oauth`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -108,6 +118,8 @@ async function exchangeCode(baseUrl: string, client: RegisteredClient, code: str
       code,
       // Must repeat the authorization request's redirect_uri exactly (RFC 6749 §4.1.3).
       redirect_uri: redirectUri,
+      // PKCE: proves this is the same login that sent the code_challenge.
+      code_verifier: codeVerifier,
     }).toString(),
   });
   if (!res.ok) throw new Error(`Code exchange failed: HTTP ${res.status} ${res.statusText}\n${await res.text()}`);

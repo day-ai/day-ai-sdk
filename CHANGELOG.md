@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Security
+
+- **OAuth logins now use PKCE (S256).** `yarn oauth:setup` and `day-ai login` send a `code_challenge` on `/integrations/authorize` and the `code_verifier` on the code exchange. The desktop and mobile examples already did. Day AI is about to require PKCE on every authorization-code login, so **upgrade before then**. Existing refresh tokens and `.env` / `~/.config/day-ai` credentials keep working; only new logins change. If you copied the login flow into your own code (Python or anything else), add the two parameters: see [Writing your own login](README.md#writing-your-own-login-python-go-).
+- New SDK exports `createPkcePair()`, `pkceChallenge()` and `buildAuthorizeUrl()`, plus offline unit tests (`yarn test:unit`).
+- The mobile example generates its OAuth `state` with `expo-crypto` instead of `Math.random()`.
+
 ### Added
 
 - **The `day-ai` CLI** (`cli/`). `yarn setup` installs, builds and runs `npm link`. `day-ai login` signs in through the browser and saves credentials to `~/.config/day-ai/credentials.json`, with no `.env` or `INTEGRATION_NAME` needed. `day-ai tools`, `describe` and `call` list, explain and call any MCP tool. Tools that change data are a dry run until `--yes`. Also adds named profiles (`--profile`, `DAY_AI_PROFILE`, `day-ai use`), `day-ai token` for other MCP clients, `status` and `doctor`.

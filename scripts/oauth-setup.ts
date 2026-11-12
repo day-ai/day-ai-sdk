@@ -6,6 +6,7 @@ import http from "node:http";
 import url from "node:url";
 import { randomBytes } from "node:crypto";
 import dotenv from "dotenv";
+import { buildAuthorizeUrl, createPkcePair } from "../src/pkce";
 
 // Load environment variables
 dotenv.config();
@@ -61,7 +62,14 @@ class OAuthSetup {
       // Step 2: Generate authorization URL and start callback server
       console.log("🔐 Step 2: Starting authorization flow...");
       const state = randomBytes(16).toString("hex");
-      const authUrl = this.buildAuthorizationUrl(clientData.client_id, state);
+      // PKCE (S256): a fresh verifier for this login only, kept in memory.
+      const pkce = createPkcePair();
+      const authUrl = buildAuthorizeUrl(this.baseUrl, {
+        clientId: clientData.client_id,
+        redirectUri: this.redirectUri,
+        state,
+        codeChallenge: pkce.challenge,
+      });
 
       console.log(
         `🌐 Please visit the following URL to authorize the integration:\n`
@@ -75,7 +83,11 @@ class OAuthSetup {
 
       // Step 4: Exchange code for tokens
       console.log("🎟️  Step 4: Exchanging code for tokens...");
-      const tokens = await this.exchangeCodeForTokens(clientData, code);
+      const tokens = await this.exchangeCodeForTokens(
+        clientData,
+        code,
+        pkce.verifier
+      );
       console.log("✅ Tokens received!\n");
 
       // Step 5: Update .env file
@@ -116,17 +128,6 @@ class OAuthSetup {
     }
 
     return (await response.json()) as OAuthClientResponse;
-  }
-
-  private buildAuthorizationUrl(clientId: string, state: string): string {
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: this.redirectUri,
-      state: state,
-      response_type: "code",
-    });
-
-    return `${this.baseUrl}/integrations/authorize?${params.toString()}`;
   }
 
   private async waitForAuthorizationCode(
@@ -199,7 +200,8 @@ class OAuthSetup {
 
   private async exchangeCodeForTokens(
     clientData: OAuthClientResponse,
-    code: string
+    code: string,
+    codeVerifier: string
   ): Promise<TokenResponse> {
     const payload = new URLSearchParams({
       grant_type: "authorization_code",
@@ -208,6 +210,8 @@ class OAuthSetup {
       code: code,
       // Must repeat the authorization request's redirect_uri exactly (RFC 6749 §4.1.3).
       redirect_uri: this.redirectUri,
+      // PKCE: proves this is the same login that sent the code_challenge.
+      code_verifier: codeVerifier,
     });
 
     const response = await fetch(`${this.baseUrl}/api/oauth`, {
