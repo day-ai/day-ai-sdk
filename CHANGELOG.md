@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-11
+
+### Security
+
+- **OAuth logins now use PKCE (S256).** `yarn oauth:setup` and `day-ai login` send a `code_challenge` on `/integrations/authorize` and the `code_verifier` on the code exchange. The desktop and mobile examples already did. Day AI is about to require PKCE on every authorization-code login, so **upgrade to 0.3.0 before then**. Existing refresh tokens and `.env` / `~/.config/day-ai` credentials keep working; only new logins change. If you copied the login flow into your own code (Python or anything else), add the two parameters: see [Writing your own login](README.md#writing-your-own-login-python-go-).
+- New SDK exports `createPkcePair()`, `pkceChallenge()` and `buildAuthorizeUrl()`, plus offline unit tests (`yarn test:unit`).
+- The mobile example generates its OAuth `state` with `expo-crypto` instead of `Math.random()`.
 
 ### Added
 
@@ -9,6 +15,7 @@
 
 ### Fixed
 
+- `DayAIClient` reports the real SDK version (from `package.json`, also exported as `SDK_VERSION`) when it connects, instead of a hardcoded `0.1.0`.
 - `DayAIClient` now keeps a rotated refresh token when the server issues one, instead of continuing to use the old one.
 
 ## 0.2.0 — 2026-10

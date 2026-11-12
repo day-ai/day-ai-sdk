@@ -57,10 +57,12 @@ These are **templates**: clone one and make it yours.
 
 ```
 src/client.ts        DayAIClient: OAuth refresh, MCP JSON-RPC, retries, typed helpers
+src/pkce.ts          PKCE (S256) helper for the OAuth login: createPkcePair, buildAuthorizeUrl
 src/types.ts         ObjectType, WhereCondition, SearchOptions, helper input types
 cli/                 The `day-ai` CLI (commander, day-ops layout): login/profiles in ~/.config/day-ai, tools, describe, call
 scripts/             oauth-setup (browser OAuth → .env), generate-tools-doc (→ TOOLS.md), test runner
 tests/tools/         Live tool tests (local Day AI dev server only)
+tests/unit/          Offline unit tests (node:test)
 examples/*.ts        Small runnable scripts (built with the SDK: yarn example:*)
 examples/<app>/      Standalone template apps, each with its own package.json
 SCHEMA.md            Data model, objectIds, search_objects syntax, relationships (hand-written)
@@ -77,6 +79,7 @@ day-ai tools | describe <tool> | call <tool> '{…}'   # writes need --yes; JSON
 yarn oauth:setup           # register a client, authorize in the browser, write .env
 yarn docs:tools            # regenerate TOOLS.md from the live server
 yarn test                  # live tool tests; local Day AI dev server only (see tests/README.md)
+yarn test:unit             # offline unit tests (PKCE helper)
 yarn example:mcp <email>   # also example:meetings, example:pagination
 ```
 
@@ -106,6 +109,7 @@ Each app in `examples/<app>/` installs and runs on its own; see its README.
 - **Keep `src/` small.** Helpers exist for the most common calls; everything else goes through `mcpCallTool()`. New helpers must match the live tool schema (see TOOLS.md) and get a test in `tests/tools/`.
 - **Don't run write tools against a real workspace casually.** `create_or_update_*`, campaign and import tools change customer data.
 - **Never commit `.env`** or print `CLIENT_SECRET` / `REFRESH_TOKEN`.
+- **Every authorization-code login uses PKCE (S256).** Use `createPkcePair()` / `buildAuthorizeUrl()` from `src/pkce.ts` and send `code_verifier` on the code exchange. Day AI rejects logins without it. `yarn test:unit` covers the helper.
 - Match the existing style: 2-space indent, single quotes in examples, double quotes in `src/`.
 
 ## Next Steps for New Claude Sessions

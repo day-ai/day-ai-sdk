@@ -1,4 +1,5 @@
 import * as dotenv from "dotenv";
+import { SDK_VERSION } from "./version";
 import type {
   ObjectType,
   WhereCondition,
@@ -527,7 +528,7 @@ export class DayAIClient {
       protocolVersion: '2025-06-18',
       clientInfo: this.config.clientInfo ?? {
         name: 'Day AI SDK',
-        version: '0.1.0',
+        version: SDK_VERSION,
       },
       capabilities: {
         tools: {},

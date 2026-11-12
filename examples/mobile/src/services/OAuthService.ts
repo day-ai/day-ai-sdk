@@ -201,10 +201,10 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 }
 
 /**
- * Generate random state parameter
+ * Generate random state parameter (CSPRNG, like the PKCE verifier)
  */
 function generateState(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  return base64UrlEncode(Crypto.getRandomBytes(16));
 }
 
 /**

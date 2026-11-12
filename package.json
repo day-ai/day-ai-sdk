@@ -1,6 +1,6 @@
 {
   "name": "day-ai-sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "SDK for integrating with Day AI",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
@@ -23,7 +23,8 @@
     "verify:parsing": "yarn build && node dist/scripts/verify-sse-parsing.js",
     "test": "yarn build && node dist/scripts/run-tests.js all",
     "test:tool": "yarn build && node dist/scripts/run-tests.js tool",
-    "test:file": "yarn build && node dist/scripts/run-tests.js file"
+    "test:file": "yarn build && node dist/scripts/run-tests.js file",
+    "test:unit": "yarn build && node --test dist/tests/unit/*.test.js"
   },
   "dependencies": {
     "commander": "^14.0.1",
